@@ -36,7 +36,7 @@ class ChristmasTreeGame {
             targetX: 0,
             targetY: 0,
             image: null,
-            wanderTimer: 0
+            wanderTimer: 0 // Timer for random wandering when all trees are lit
         };
         
         this.gameState = 'waiting'; // waiting, playing, gameover
@@ -45,6 +45,7 @@ class ChristmasTreeGame {
         this.lastTime = 0;
         this.treesToTurnOff = []; // Queue of trees to turn off
         this.lastTurnOffTime = 0;
+        this.santaTapped = false; // Track if Santa was tapped
         
         this.setupCanvas();
         this.loadSantaImage();
@@ -157,16 +158,17 @@ class ChristmasTreeGame {
     
     createTrees() {
         this.trees = [];
-        const treeCount = 10;
+        const treeCount = 10; // Default, but will use actual count placed
         const maxAttempts = 5000; // Increased attempts for better placement
         const treeWidth = 60;
         const treeHeight = 80;
         
         // Reduced padding for mobile to maximize usable space
+        // Allow trees higher up on screen
         const padding = 30;
         const minX = padding;
         const maxX = this.canvas.width - padding;
-        const minY = padding + 80; // Reduced top space
+        const minY = padding + 20; // Allow trees much higher up
         const maxY = this.canvas.height - padding - 30; // Reduced bottom space
         
         console.log('Creating trees in area:', {
@@ -383,6 +385,22 @@ class ChristmasTreeGame {
     }
     
     handleTreeTap(x, y) {
+        // First check if tap is on Santa - instant game over!
+        const santaCenterX = this.santa.x;
+        const santaCenterY = this.santa.y - this.santa.height / 2;
+        const santaDx = x - santaCenterX;
+        const santaDy = y - santaCenterY;
+        const santaDistance = Math.sqrt(santaDx * santaDx + santaDy * santaDy);
+        const santaHitRadius = Math.max(this.santa.width / 2, this.santa.height / 2) + 20;
+        
+        if (santaDistance < santaHitRadius) {
+            console.log('Santa tapped! Game over!');
+            this.santaTapped = true;
+            this.gameState = 'gameover';
+            this.endGame();
+            return;
+        }
+        
         // Check if tap is on a tree
         let tapped = false;
         for (const tree of this.trees) {
@@ -421,6 +439,7 @@ class ChristmasTreeGame {
         this.lastTime = Date.now();
         this.lastTurnOffTime = 0;
         this.treesToTurnOff = [];
+        this.santaTapped = false;
         
         // Initialize Santa position
         this.santa.x = this.canvas.width / 2;
@@ -442,9 +461,10 @@ class ChristmasTreeGame {
         console.log('Game started with', this.trees.length, 'trees');
         
         // Schedule trees to turn off: one per second from 2s to 18s
-        // We have 10 trees, so they'll turn off at 2s, 3s, 4s, ..., 11s
-        for (let i = 0; i < 10; i++) {
-            const turnOffTime = 2 + i; // 2s, 3s, 4s, ..., 11s
+        // Schedule based on actual number of trees placed
+        const treeCount = this.trees.length;
+        for (let i = 0; i < treeCount; i++) {
+            const turnOffTime = 2 + i; // 2s, 3s, 4s, etc.
             this.treesToTurnOff.push(turnOffTime);
         }
         
@@ -460,6 +480,7 @@ class ChristmasTreeGame {
         this.gameTime = 0;
         this.lastTurnOffTime = 0;
         this.treesToTurnOff = [];
+        this.santaTapped = false;
         this.startButton.disabled = false;
         this.startButton.textContent = 'Start Game';
         
@@ -495,31 +516,75 @@ class ChristmasTreeGame {
             }
         }
         
-        // Update Santa's random wandering
-        this.santa.wanderTimer -= deltaTime;
-        if (this.santa.wanderTimer <= 0) {
-            // Pick a new random target
-            const padding = 50;
-            this.santa.targetX = padding + Math.random() * (this.canvas.width - 2 * padding);
-            this.santa.targetY = padding + Math.random() * (this.canvas.height - 2 * padding);
-            this.santa.wanderTimer = 2 + Math.random() * 3; // Wander for 2-5 seconds
-        }
+        // Update Santa's movement - move towards unlit trees
+        const unlitTrees = this.trees.filter(t => !t.lightsOn);
         
-        // Move Santa towards target
-        const dx = this.santa.targetX - this.santa.x;
-        const dy = this.santa.targetY - this.santa.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance > 5) {
-            const speed = 30; // pixels per second
-            this.santa.speedX = (dx / distance) * speed;
-            this.santa.speedY = (dy / distance) * speed;
+        if (unlitTrees.length > 0) {
+            // Find the nearest unlit tree
+            let nearestTree = null;
+            let nearestDistance = Infinity;
             
-            this.santa.x += this.santa.speedX * deltaTime;
-            this.santa.y += this.santa.speedY * deltaTime;
+            for (const tree of unlitTrees) {
+                const treeCenterX = tree.x;
+                const treeCenterY = tree.y - tree.height / 2;
+                const dx = treeCenterX - this.santa.x;
+                const dy = treeCenterY - this.santa.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < nearestDistance) {
+                    nearestDistance = distance;
+                    nearestTree = tree;
+                }
+            }
+            
+            // Move towards the nearest unlit tree
+            if (nearestTree) {
+                const treeCenterX = nearestTree.x;
+                const treeCenterY = nearestTree.y - nearestTree.height / 2;
+                const dx = treeCenterX - this.santa.x;
+                const dy = treeCenterY - this.santa.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 10) {
+                    // Increased speed - Santa moves faster
+                    const speed = 80; // pixels per second (increased from 30)
+                    this.santa.speedX = (dx / distance) * speed;
+                    this.santa.speedY = (dy / distance) * speed;
+                    
+                    this.santa.x += this.santa.speedX * deltaTime;
+                    this.santa.y += this.santa.speedY * deltaTime;
+                } else {
+                    this.santa.speedX = 0;
+                    this.santa.speedY = 0;
+                }
+            }
         } else {
-            this.santa.speedX = 0;
-            this.santa.speedY = 0;
+            // All trees are lit - Santa wanders randomly
+            this.santa.wanderTimer -= deltaTime;
+            if (this.santa.wanderTimer <= 0) {
+                // Pick a new random target
+                const padding = 50;
+                this.santa.targetX = padding + Math.random() * (this.canvas.width - 2 * padding);
+                this.santa.targetY = padding + Math.random() * (this.canvas.height - 2 * padding);
+                this.santa.wanderTimer = 2 + Math.random() * 3; // Wander for 2-5 seconds
+            }
+            
+            // Move Santa towards random target
+            const dx = this.santa.targetX - this.santa.x;
+            const dy = this.santa.targetY - this.santa.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > 5) {
+                const speed = 80; // pixels per second (increased from 30)
+                this.santa.speedX = (dx / distance) * speed;
+                this.santa.speedY = (dy / distance) * speed;
+                
+                this.santa.x += this.santa.speedX * deltaTime;
+                this.santa.y += this.santa.speedY * deltaTime;
+            } else {
+                this.santa.speedX = 0;
+                this.santa.speedY = 0;
+            }
         }
         
         // Keep Santa in bounds
@@ -537,7 +602,7 @@ class ChristmasTreeGame {
         });
         
         this.lightsOn = lightsOnCount;
-        this.lightsOnElement.textContent = lightsOnCount + '/10';
+        this.lightsOnElement.textContent = lightsOnCount + '/' + this.trees.length;
         
         // Check game end condition at 20 seconds
         if (this.gameTime >= 20) {
@@ -547,13 +612,24 @@ class ChristmasTreeGame {
     
     endGame() {
         this.gameState = 'gameover';
-        const allLightsOn = this.lightsOn === 10;
+        const treeCount = this.trees.length;
+        const allLightsOn = this.lightsOn === treeCount;
         
-        if (allLightsOn) {
+        if (this.santaTapped) {
+            // Santa was tapped - instant game over
+            document.getElementById('modalTitle').textContent = '🎄 Oh No! 🎄';
+            document.getElementById('modalMessage').textContent = "You tapped Santa! Don't let him catch you - he's trying to turn off the lights!";
+            document.getElementById('modalStats').textContent = `You had ${this.lightsOn} out of ${treeCount} trees lit.`;
+            const vrButton = document.getElementById('vrButton');
+            if (vrButton) {
+                vrButton.style.display = 'none';
+            }
+            this.modalOverlay.classList.add('show');
+        } else if (allLightsOn) {
             // Victory!
             document.getElementById('modalTitle').textContent = '🎄 Congratulations! 🎄';
             document.getElementById('modalMessage').textContent = "We're going to a VR Game in Antwerp with the entire family! Just need to pick a date... it's going to be awesome.";
-            document.getElementById('modalStats').textContent = `All 10 trees are lit!`;
+            document.getElementById('modalStats').textContent = `All ${treeCount} trees are lit!`;
             // Show VR button
             const vrButton = document.getElementById('vrButton');
             if (vrButton) {
@@ -561,9 +637,9 @@ class ChristmasTreeGame {
             }
             this.modalOverlay.classList.add('show');
         } else {
-            // Game over - show message and allow replay
+            // Game over - time ran out
             document.getElementById('modalTitle').textContent = '🎄 Try Again! 🎄';
-            document.getElementById('modalMessage').textContent = `You had ${this.lightsOn} out of 10 trees lit. Keep all trees lit by 20 seconds to win!`;
+            document.getElementById('modalMessage').textContent = `You had ${this.lightsOn} out of ${treeCount} trees lit. Keep all trees lit by 20 seconds to win!`;
             document.getElementById('modalStats').textContent = '';
             const vrButton = document.getElementById('vrButton');
             if (vrButton) {
