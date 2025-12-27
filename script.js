@@ -150,13 +150,43 @@ class ChristmasTreeGame {
     
     enableOrientation() {
         this.orientationEnabled = true;
-        window.addEventListener('deviceorientation', (e) => {
-            if (this.gameState === 'playing') {
-                // Use gamma (left/right tilt) for movement
-                this.tiltX = e.gamma || 0;
-                // Clamp and normalize
-                this.tiltX = Math.max(-90, Math.min(90, this.tiltX));
+        console.log('Orientation enabled - listening for device orientation events');
+        
+        const handleOrientation = (e) => {
+            // Use gamma (left/right tilt) for movement
+            // Gamma ranges from -90 to 90 degrees
+            let gamma = e.gamma;
+            
+            // Handle null/undefined gamma
+            if (gamma === null || gamma === undefined) {
+                console.warn('Gamma is null/undefined, using beta or alpha');
+                // Fallback: try beta (forward/back tilt) or use 0
+                gamma = e.beta ? (e.beta - 90) : 0;
             }
+            
+            // Normalize gamma to -90 to 90 range
+            gamma = Math.max(-90, Math.min(90, gamma));
+            
+            // Convert to tilt value
+            this.tiltX = gamma;
+            
+            // Only log occasionally to avoid spam
+            if (Math.random() < 0.01) {
+                console.log('Tilt detected:', { gamma, tiltX: this.tiltX, gameState: this.gameState });
+            }
+        };
+        
+        // Add event listener
+        if (window.DeviceOrientationEvent) {
+            window.addEventListener('deviceorientation', handleOrientation, true);
+            console.log('Device orientation listener added');
+        } else {
+            console.error('DeviceOrientationEvent not supported');
+        }
+        
+        // Also listen for orientationchange to handle device rotation
+        window.addEventListener('orientationchange', () => {
+            console.log('Orientation changed');
         });
     }
     
@@ -187,7 +217,7 @@ class ChristmasTreeGame {
             return;
         }
         
-        this.startButton.addEventListener('click', async (e) => {
+        const startGameHandler = async (e) => {
             e.preventDefault();
             e.stopPropagation();
             console.log('Start button clicked!');
@@ -195,7 +225,13 @@ class ChristmasTreeGame {
             try {
                 // On iOS, request orientation permission when starting
                 if (!this.orientationEnabled) {
-                    await this.requestOrientationPermission();
+                    console.log('Requesting orientation permission...');
+                    const granted = await this.requestOrientationPermission();
+                    if (granted) {
+                        console.log('Orientation permission granted!');
+                    } else {
+                        console.log('Orientation permission denied, using touch controls');
+                    }
                 }
                 // Start the game regardless of permission status
                 this.startGame();
@@ -204,7 +240,9 @@ class ChristmasTreeGame {
                 // Try to start anyway
                 this.startGame();
             }
-        });
+        };
+        
+        this.startButton.addEventListener('click', startGameHandler);
         
         // Also add touch event for mobile
         this.startButton.addEventListener('touchend', async (e) => {
@@ -375,7 +413,8 @@ class ChristmasTreeGame {
         }
         
         // Update Santa position based on tilt with speed boost mechanics
-        const targetSpeed = this.tiltX * this.tiltSensitivity;
+        // Increase sensitivity for better responsiveness on mobile
+        const targetSpeed = this.tiltX * (this.tiltSensitivity * 1.5);
         
         // Determine current direction based on target speed
         let newDirection = 0;
