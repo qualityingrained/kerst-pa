@@ -475,11 +475,22 @@ class ChristmasTreeGame {
         
         console.log('Game started with', this.trees.length, 'trees');
         
-        // Schedule trees to turn off: one per second from 2s to 18s
+        // Schedule trees to turn off: one per second from 2s until 1 second before end (19s)
+        // Game ends at 20s, so trees turn off until 19s
         // Schedule based on actual number of trees placed
         const treeCount = this.trees.length;
+        const gameDuration = 20; // Total game time in seconds
+        const lastTurnOffSecond = gameDuration - 1; // 19 seconds (1 second before end)
+        
+        // Calculate how many seconds we have to turn off trees (from 2s to 19s = 18 seconds)
+        const turnOffDuration = lastTurnOffSecond - 2 + 1; // 18 seconds (2, 3, 4, ..., 19)
+        
+        // Turn off trees one per second, but if we have more trees than seconds,
+        // we'll turn off multiple trees in the same second
         for (let i = 0; i < treeCount; i++) {
-            const turnOffTime = 2 + i; // 2s, 3s, 4s, etc.
+            // Distribute trees across the available seconds
+            const secondIndex = i % turnOffDuration;
+            const turnOffTime = 2 + secondIndex;
             this.treesToTurnOff.push(turnOffTime);
         }
         
@@ -515,19 +526,34 @@ class ChristmasTreeGame {
         
         // Turn off trees according to schedule
         // Check if it's time to turn off the next tree
+        // Trees turn off from 2s until 1 second before end (19s)
         const currentSecond = Math.floor(this.gameTime);
-        if (currentSecond >= 2 && currentSecond <= 18 && currentSecond !== this.lastTurnOffTime) {
-            // Find the next tree to turn off at this second
-            const turnOffIndex = this.treesToTurnOff.indexOf(currentSecond);
-            if (turnOffIndex !== -1) {
-                // Find a random tree that's still on
+        const lastTurnOffSecond = 19; // 1 second before game ends at 20s
+        
+        if (currentSecond >= 2 && currentSecond <= lastTurnOffSecond && currentSecond !== this.lastTurnOffTime) {
+            // Find all trees scheduled to turn off at this second
+            const treesToTurnOffNow = this.treesToTurnOff.filter(time => time === currentSecond);
+            
+            if (treesToTurnOffNow.length > 0) {
+                // Find trees that are still on
                 const onTrees = this.trees.filter(t => t.lightsOn);
-                if (onTrees.length > 0) {
-                    const randomTree = onTrees[Math.floor(Math.random() * onTrees.length)];
-                    randomTree.lightsOn = false;
-                    this.treesToTurnOff.splice(turnOffIndex, 1);
-                    this.lastTurnOffTime = currentSecond;
+                
+                // Turn off as many trees as scheduled for this second (or as many as are available)
+                const treesToTurnOff = Math.min(treesToTurnOffNow.length, onTrees.length);
+                
+                for (let i = 0; i < treesToTurnOff; i++) {
+                    if (onTrees.length > 0) {
+                        const randomTree = onTrees[Math.floor(Math.random() * onTrees.length)];
+                        randomTree.lightsOn = false;
+                        // Remove from onTrees array
+                        const index = onTrees.indexOf(randomTree);
+                        onTrees.splice(index, 1);
+                    }
                 }
+                
+                // Remove all instances of this second from the schedule
+                this.treesToTurnOff = this.treesToTurnOff.filter(time => time !== currentSecond);
+                this.lastTurnOffTime = currentSecond;
             }
         }
         
