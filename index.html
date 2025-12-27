@@ -11,28 +11,7 @@
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"
     />
-    <meta name="screen-orientation" content="landscape" />
-    <style>
-      @media screen and (orientation: portrait) {
-        body::before {
-          content: "Please rotate your device to landscape mode to play!";
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100vw;
-          height: 100vh;
-          background: rgba(0, 0, 0, 0.95);
-          z-index: 9999;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 24px;
-          text-align: center;
-          padding: 20px;
-        }
-      }
-    </style>
+    <meta name="screen-orientation" content="portrait" />
     <title>Pa's Christmas - Keep the Lights On!</title>
     <link rel="stylesheet" href="style.css" />
   </head>
@@ -57,9 +36,9 @@
       </div>
 
       <div class="controls">
-        <p class="instruction">Tilt your phone left and right to move Santa!</p>
+        <p class="instruction">Tap trees to turn the lights back on! ✨</p>
         <p class="instruction-small">
-          Keep Santa near the trees to keep the lights on! ✨
+          Keep all 15 trees lit by 20 seconds to win!
         </p>
         <button id="startButton" class="start-button">Start Game</button>
       </div>

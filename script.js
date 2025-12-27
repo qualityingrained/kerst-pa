@@ -10,72 +10,69 @@ class ChristmasTreeGame {
         
         // Check if all required elements exist
         if (!this.canvas || !this.gameArea || !this.startButton) {
-            console.error('Required game elements not found!', {
-                canvas: !!this.canvas,
-                gameArea: !!this.gameArea,
-                startButton: !!this.startButton
-            });
-            // Still try to set up button listener if it exists
-            if (this.startButton) {
-                this.startButton.addEventListener('click', () => {
-                    alert('Game elements not properly loaded. Please refresh the page.');
-                });
-            }
+            console.error('Required game elements not found!');
             return;
         }
         
-        // Get canvas context after checking canvas exists
+        // Get canvas context
         this.ctx = this.canvas.getContext('2d');
         if (!this.ctx) {
             console.error('Could not get canvas context!');
             return;
         }
         
+        // Screen dimensions (will be set on load)
+        this.screenWidth = 0;
+        this.screenHeight = 0;
+        
         this.trees = [];
         this.santa = {
             x: 0,
             y: 0,
-            width: 60,
-            height: 80,
-            speed: 0,
+            width: 50,
+            height: 70,
+            speedX: 0,
+            speedY: 0,
+            targetX: 0,
+            targetY: 0,
             image: null,
-            direction: 0, // -1 left, 0 neutral, 1 right
-            lastDirection: 0, // Track previous direction
-            directionChangeTimer: 0, // Timer for direction change (0.2s)
-            speedBoost: 1.0, // Speed multiplier (up to 1.1 = 10% boost)
-            sameDirectionTime: 0 // Time moving in same direction
+            wanderTimer: 0
         };
         
-        this.gameState = 'waiting'; // waiting, playing, paused, gameover
+        this.gameState = 'waiting'; // waiting, playing, gameover
         this.lightsOn = 0;
         this.gameTime = 0;
-        this.gameTimeRemaining = 20; // Countdown from 20 seconds
         this.lastTime = 0;
-        this.tiltX = 0;
-        this.tiltSensitivity = 0.02;
-        this.gamePhase = 'initial'; // initial, turningOff, final
-        this.treesTurnedOff = 0; // Track how many trees have been turned off
-        this.orientationEnabled = false; // Track if orientation is enabled
+        this.treesToTurnOff = []; // Queue of trees to turn off
+        this.lastTurnOffTime = 0;
         
         this.setupCanvas();
         this.loadSantaImage();
-        this.createTrees();
         this.setupEventListeners();
-        this.setupDeviceOrientation();
         this.animate();
     }
     
     setupCanvas() {
         const resize = () => {
+            // Detect actual screen frame size
+            this.screenWidth = window.innerWidth;
+            this.screenHeight = window.innerHeight;
+            
             const rect = this.gameArea.getBoundingClientRect();
             this.canvas.width = rect.width;
             this.canvas.height = rect.height;
-            this.santa.x = this.canvas.width / 2;
-            this.santa.y = this.canvas.height - 100;
+            
+            // Recreate trees if game hasn't started
+            if (this.gameState === 'waiting' && this.canvas.width > 0 && this.canvas.height > 0) {
+                this.createTrees();
+            }
         };
         
         resize();
         window.addEventListener('resize', resize);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(resize, 100); // Delay to ensure correct dimensions after rotation
+        });
     }
     
     loadSantaImage() {
@@ -85,130 +82,73 @@ class ChristmasTreeGame {
             // Image loaded
         };
         this.santa.image.onerror = () => {
-            // If image fails to load, we'll draw a simple Santa shape
             console.log('Santa image not found, using placeholder');
         };
     }
     
+    // Check if two trees overlap more than 10%
+    checkOverlap(tree1, tree2) {
+        const dx = tree1.x - tree2.x;
+        const dy = tree1.y - tree2.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        // 10% overlap means distance should be at least 90% of combined radius
+        const minDistance = (tree1.width + tree2.width) * 0.45; // Half width = radius, so combined radius * 0.9
+        return distance < minDistance;
+    }
+    
     createTrees() {
         this.trees = [];
-        const treeCount = 10;
-        const spacing = this.canvas.width / (treeCount + 1);
+        const treeCount = 15;
+        const maxAttempts = 1000; // Prevent infinite loops
+        const treeWidth = 60;
+        const treeHeight = 80;
+        
+        // Padding from edges
+        const padding = 40;
+        const minX = padding;
+        const maxX = this.canvas.width - padding;
+        const minY = padding + 100; // Leave space at top for UI
+        const maxY = this.canvas.height - padding - 50; // Leave space at bottom
         
         for (let i = 0; i < treeCount; i++) {
-            const x = spacing * (i + 1);
-            const y = this.canvas.height - 150;
-            const height = 80 + Math.random() * 40;
-            const width = height * 0.6;
+            let attempts = 0;
+            let validPosition = false;
+            let x, y;
             
-            this.trees.push({
-                x: x,
-                y: y,
-                width: width,
-                height: height,
-                lightsOn: true, // Start with lights ON
-                proximity: 0, // Distance to Santa
-                index: i // Store index for tracking
-            });
-        }
-    }
-    
-    setupDeviceOrientation() {
-        // Request permission for device orientation (iOS 13+)
-        if (typeof DeviceOrientationEvent !== 'undefined' && 
-            typeof DeviceOrientationEvent.requestPermission === 'function') {
-            // iOS 13+ - request permission on first user interaction
-            // Permission will be requested when start button is clicked
-            // For now, enable touch controls as fallback
-            this.enableTouchControls();
-        } else {
-            // Android or older iOS - enable immediately
-            this.enableOrientation();
-        }
-    }
-    
-    async requestOrientationPermission() {
-        if (typeof DeviceOrientationEvent !== 'undefined' && 
-            typeof DeviceOrientationEvent.requestPermission === 'function') {
-            try {
-                const permission = await DeviceOrientationEvent.requestPermission();
-                if (permission === 'granted') {
-                    this.enableOrientation();
-                    return true;
-                } else {
-                    // Permission denied - keep using touch controls
-                    return false;
+            while (!validPosition && attempts < maxAttempts) {
+                x = minX + Math.random() * (maxX - minX);
+                y = minY + Math.random() * (maxY - minY);
+                
+                // Check overlap with existing trees
+                validPosition = true;
+                for (const existingTree of this.trees) {
+                    if (this.checkOverlap(
+                        { x, y, width: treeWidth, height: treeHeight },
+                        existingTree
+                    )) {
+                        validPosition = false;
+                        break;
+                    }
                 }
-            } catch (error) {
-                console.error('Permission error:', error);
-                // Keep using touch controls
-                return false;
+                
+                attempts++;
+            }
+            
+            if (validPosition) {
+                this.trees.push({
+                    x: x,
+                    y: y,
+                    width: treeWidth,
+                    height: treeHeight,
+                    lightsOn: true,
+                    index: i
+                });
+            } else {
+                console.warn(`Could not place tree ${i + 1} without overlap`);
             }
         }
-        return false;
-    }
-    
-    enableOrientation() {
-        this.orientationEnabled = true;
-        console.log('Orientation enabled - listening for device orientation events');
         
-        const handleOrientation = (e) => {
-            // Use gamma (left/right tilt) for movement
-            // Gamma ranges from -90 to 90 degrees
-            let gamma = e.gamma;
-            
-            // Handle null/undefined gamma
-            if (gamma === null || gamma === undefined) {
-                console.warn('Gamma is null/undefined, using beta or alpha');
-                // Fallback: try beta (forward/back tilt) or use 0
-                gamma = e.beta ? (e.beta - 90) : 0;
-            }
-            
-            // Normalize gamma to -90 to 90 range
-            gamma = Math.max(-90, Math.min(90, gamma));
-            
-            // Convert to tilt value
-            this.tiltX = gamma;
-            
-            // Only log occasionally to avoid spam
-            if (Math.random() < 0.01) {
-                console.log('Tilt detected:', { gamma, tiltX: this.tiltX, gameState: this.gameState });
-            }
-        };
-        
-        // Add event listener
-        if (window.DeviceOrientationEvent) {
-            window.addEventListener('deviceorientation', handleOrientation, true);
-            console.log('Device orientation listener added');
-        } else {
-            console.error('DeviceOrientationEvent not supported');
-        }
-        
-        // Also listen for orientationchange to handle device rotation
-        window.addEventListener('orientationchange', () => {
-            console.log('Orientation changed');
-        });
-    }
-    
-    enableTouchControls() {
-        let touchStartX = 0;
-        let touchCurrentX = 0;
-        
-        this.canvas.addEventListener('touchstart', (e) => {
-            if (this.gameState === 'playing') {
-                touchStartX = e.touches[0].clientX;
-            }
-        });
-        
-        this.canvas.addEventListener('touchmove', (e) => {
-            if (this.gameState === 'playing') {
-                e.preventDefault();
-                touchCurrentX = e.touches[0].clientX;
-                const delta = touchCurrentX - touchStartX;
-                this.tiltX = (delta / this.canvas.width) * 180; // Convert to tilt-like value
-                this.tiltX = Math.max(-90, Math.min(90, this.tiltX));
-            }
-        });
+        console.log(`Created ${this.trees.length} trees`);
     }
     
     setupEventListeners() {
@@ -217,53 +157,17 @@ class ChristmasTreeGame {
             return;
         }
         
-        const startGameHandler = async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Start button clicked!');
-            
-            try {
-                // On iOS, request orientation permission when starting
-                if (!this.orientationEnabled) {
-                    console.log('Requesting orientation permission...');
-                    const granted = await this.requestOrientationPermission();
-                    if (granted) {
-                        console.log('Orientation permission granted!');
-                    } else {
-                        console.log('Orientation permission denied, using touch controls');
-                    }
-                }
-                // Start the game regardless of permission status
-                this.startGame();
-            } catch (error) {
-                console.error('Error starting game:', error);
-                // Try to start anyway
-                this.startGame();
-            }
-        };
+        this.startButton.addEventListener('click', () => {
+            this.startGame();
+        });
         
-        this.startButton.addEventListener('click', startGameHandler);
-        
-        // Also add touch event for mobile
-        this.startButton.addEventListener('touchend', async (e) => {
+        this.startButton.addEventListener('touchend', (e) => {
             e.preventDefault();
-            e.stopPropagation();
-            console.log('Start button touched!');
-            
-            try {
-                if (!this.orientationEnabled) {
-                    await this.requestOrientationPermission();
-                }
-                this.startGame();
-            } catch (error) {
-                console.error('Error starting game:', error);
-                this.startGame();
-            }
+            this.startGame();
         });
         
         this.modalClose.addEventListener('click', () => {
             this.modalOverlay.classList.remove('show');
-            // Hide VR button when closing modal
             const vrButton = document.getElementById('vrButton');
             if (vrButton) {
                 vrButton.style.display = 'none';
@@ -274,7 +178,6 @@ class ChristmasTreeGame {
         this.modalOverlay.addEventListener('click', (e) => {
             if (e.target === this.modalOverlay) {
                 this.modalOverlay.classList.remove('show');
-                // Hide VR button when closing modal
                 const vrButton = document.getElementById('vrButton');
                 if (vrButton) {
                     vrButton.style.display = 'none';
@@ -282,54 +185,59 @@ class ChristmasTreeGame {
             }
         });
         
-        // Keyboard controls for desktop testing
-        let leftPressed = false;
-        let rightPressed = false;
-        
-        window.addEventListener('keydown', (e) => {
+        // Touch events for tapping trees
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
             if (this.gameState === 'playing') {
-                if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
-                    leftPressed = true;
-                }
-                if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-                    rightPressed = true;
-                }
+                const rect = this.canvas.getBoundingClientRect();
+                const touch = e.touches[0];
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                this.handleTreeTap(x, y);
             }
         });
         
-        window.addEventListener('keyup', (e) => {
-            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
-                leftPressed = false;
-            }
-            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-                rightPressed = false;
+        // Mouse events for desktop testing
+        this.canvas.addEventListener('click', (e) => {
+            if (this.gameState === 'playing') {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                this.handleTreeTap(x, y);
             }
         });
-        
-        // Update tilt from keyboard
-        setInterval(() => {
-            if (this.gameState === 'playing') {
-                if (leftPressed) {
-                    this.tiltX = Math.max(-90, this.tiltX - 5);
-                }
-                if (rightPressed) {
-                    this.tiltX = Math.min(90, this.tiltX + 5);
-                }
-                if (!leftPressed && !rightPressed) {
-                    this.tiltX *= 0.9; // Decay
-                }
+    }
+    
+    handleTreeTap(x, y) {
+        // Check if tap is on a tree
+        for (const tree of this.trees) {
+            const dx = x - tree.x;
+            const dy = y - tree.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Check if tap is within tree bounds (using a generous hit area)
+            if (distance < tree.width / 2 + 20) {
+                tree.lightsOn = true;
+                // Visual feedback could be added here
+                break;
             }
-        }, 16);
+        }
     }
     
     startGame() {
         console.log('Starting game...');
         this.gameState = 'playing';
         this.gameTime = 0;
-        this.gameTimeRemaining = 20;
         this.lastTime = Date.now();
-        this.gamePhase = 'initial';
-        this.treesTurnedOff = 0;
+        this.lastTurnOffTime = 0;
+        this.treesToTurnOff = [];
+        
+        // Initialize Santa position
+        this.santa.x = this.canvas.width / 2;
+        this.santa.y = this.canvas.height / 2;
+        this.santa.targetX = this.santa.x;
+        this.santa.targetY = this.santa.y;
+        this.santa.wanderTimer = 0;
         
         if (this.startButton) {
             this.startButton.disabled = true;
@@ -341,30 +249,27 @@ class ChristmasTreeGame {
             tree.lightsOn = true;
         });
         
+        // Schedule trees to turn off: one per second from 2s to 18s
+        // That's 16 trees, but we only have 15, so all will be off by 17s
+        for (let i = 0; i < 15; i++) {
+            const turnOffTime = 2 + i; // 2s, 3s, 4s, ..., 16s
+            this.treesToTurnOff.push(turnOffTime);
+        }
+        
         console.log('Game started!', {
             gameState: this.gameState,
-            treesCount: this.trees.length
+            treesCount: this.trees.length,
+            treesToTurnOff: this.treesToTurnOff.length
         });
     }
     
     resetGame() {
         this.gameState = 'waiting';
         this.gameTime = 0;
-        this.gameTimeRemaining = 20;
-        this.gamePhase = 'initial';
-        this.treesTurnedOff = 0;
+        this.lastTurnOffTime = 0;
+        this.treesToTurnOff = [];
         this.startButton.disabled = false;
         this.startButton.textContent = 'Start Game';
-        this.santa.x = this.canvas.width / 2;
-        this.tiltX = 0;
-        
-        // Reset Santa movement properties
-        this.santa.speed = 0;
-        this.santa.direction = 0;
-        this.santa.lastDirection = 0;
-        this.santa.directionChangeTimer = 0;
-        this.santa.speedBoost = 1.0;
-        this.santa.sameDirectionTime = 0;
         
         // Reset all trees with lights ON
         this.trees.forEach(tree => {
@@ -375,144 +280,88 @@ class ChristmasTreeGame {
     update(deltaTime) {
         if (this.gameState !== 'playing') return;
         
-        // Update game time (countdown from 20)
+        // Update game time
         this.gameTime += deltaTime;
-        this.gameTimeRemaining = Math.max(0, 20 - this.gameTime);
-        this.gameTimeElement.textContent = Math.ceil(this.gameTimeRemaining) + 's';
+        const timeRemaining = Math.max(0, 20 - this.gameTime);
+        this.gameTimeElement.textContent = Math.ceil(timeRemaining) + 's';
         
-        // Determine game phase
-        // 0-2s: All lights on
-        // 2-10s: Every 1 second one tree turns off, Santa can turn them back on
-        // 10-20s: Final phase - Santa can turn on remaining trees
-        if (this.gameTime < 2) {
-            this.gamePhase = 'initial'; // 0-2s: All lights on
-        } else if (this.gameTime < 10) {
-            this.gamePhase = 'turningOff'; // 2-10s: Trees turning off
-        } else {
-            this.gamePhase = 'final'; // 10-20s: Final phase
-        }
-        
-        // Turn off trees every 1 second from 2s to 10s
-        // At 2s, 3s, 4s, 5s, 6s, 7s, 8s, 9s - that's 8 trees
-        if (this.gamePhase === 'turningOff') {
-            const timeSince2 = this.gameTime - 2;
-            const treesToTurnOff = Math.floor(timeSince2) + 1; // 1 at 2s, 2 at 3s, 3 at 4s, etc.
-            const maxTreesToTurnOff = 8; // Turn off 8 trees (one every second from 2-10s)
-            
-            // Check if we need to turn off more trees
-            if (treesToTurnOff > this.treesTurnedOff && treesToTurnOff <= maxTreesToTurnOff) {
-                // Find trees that are still on
+        // Turn off trees according to schedule
+        // Check if it's time to turn off the next tree
+        const currentSecond = Math.floor(this.gameTime);
+        if (currentSecond >= 2 && currentSecond <= 18 && currentSecond !== this.lastTurnOffTime) {
+            // Find the next tree to turn off at this second
+            const turnOffIndex = this.treesToTurnOff.indexOf(currentSecond);
+            if (turnOffIndex !== -1) {
+                // Find a random tree that's still on
                 const onTrees = this.trees.filter(t => t.lightsOn);
                 if (onTrees.length > 0) {
-                    // Turn off a random tree that's still on
                     const randomTree = onTrees[Math.floor(Math.random() * onTrees.length)];
                     randomTree.lightsOn = false;
-                    this.treesTurnedOff = treesToTurnOff;
+                    this.treesToTurnOff.splice(turnOffIndex, 1);
+                    this.lastTurnOffTime = currentSecond;
                 }
             }
         }
         
-        // Update Santa position based on tilt with speed boost mechanics
-        // Increase sensitivity for better responsiveness on mobile
-        const targetSpeed = this.tiltX * (this.tiltSensitivity * 1.5);
+        // Update Santa's random wandering
+        this.santa.wanderTimer -= deltaTime;
+        if (this.santa.wanderTimer <= 0) {
+            // Pick a new random target
+            const padding = 50;
+            this.santa.targetX = padding + Math.random() * (this.canvas.width - 2 * padding);
+            this.santa.targetY = padding + Math.random() * (this.canvas.height - 2 * padding);
+            this.santa.wanderTimer = 2 + Math.random() * 3; // Wander for 2-5 seconds
+        }
         
-        // Determine current direction based on target speed
-        let newDirection = 0;
-        if (targetSpeed > 0.001) {
-            newDirection = 1; // Moving right
-        } else if (targetSpeed < -0.001) {
-            newDirection = -1; // Moving left
+        // Move Santa towards target
+        const dx = this.santa.targetX - this.santa.x;
+        const dy = this.santa.targetY - this.santa.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance > 5) {
+            const speed = 30; // pixels per second
+            this.santa.speedX = (dx / distance) * speed;
+            this.santa.speedY = (dy / distance) * speed;
+            
+            this.santa.x += this.santa.speedX * deltaTime;
+            this.santa.y += this.santa.speedY * deltaTime;
         } else {
-            newDirection = 0; // Neutral
+            this.santa.speedX = 0;
+            this.santa.speedY = 0;
         }
-        
-        // Check if direction changed
-        if (newDirection !== this.santa.lastDirection && this.santa.lastDirection !== 0) {
-            // Direction changed - start direction change timer
-            this.santa.directionChangeTimer = 0.2; // 0.2 seconds to change direction
-            this.santa.speedBoost = 1.0; // Reset speed boost
-            this.santa.sameDirectionTime = 0;
-        } else if (newDirection === this.santa.lastDirection && newDirection !== 0) {
-            // Same direction - increase speed boost over time
-            this.santa.sameDirectionTime += deltaTime;
-            // Speed boost increases up to 10% (1.1) over 1 second
-            this.santa.speedBoost = Math.min(1.1, 1.0 + (this.santa.sameDirectionTime * 0.1));
-        }
-        
-        // Update direction change timer
-        if (this.santa.directionChangeTimer > 0) {
-            this.santa.directionChangeTimer -= deltaTime;
-            // During direction change, reduce responsiveness
-            const changeProgress = 1 - (this.santa.directionChangeTimer / 0.2);
-            this.santa.speed += (targetSpeed - this.santa.speed) * 0.1 * changeProgress;
-        } else {
-            // Normal movement
-            this.santa.speed += (targetSpeed - this.santa.speed) * 0.1;
-        }
-        
-        // Apply speed boost
-        const boostedSpeed = this.santa.speed * this.santa.speedBoost;
-        this.santa.x += boostedSpeed * deltaTime * 100;
-        
-        // Update direction tracking
-        this.santa.lastDirection = newDirection;
         
         // Keep Santa in bounds
         this.santa.x = Math.max(this.santa.width / 2, 
                        Math.min(this.canvas.width - this.santa.width / 2, this.santa.x));
+        this.santa.y = Math.max(this.santa.height / 2, 
+                       Math.min(this.canvas.height - this.santa.height / 2, this.santa.y));
         
-        // Update trees and lights based on phase
+        // Count lights on
         let lightsOnCount = 0;
-        const touchDistance = 80; // Distance for Santa to touch tree
-        
         this.trees.forEach(tree => {
-            // Calculate distance to Santa
-            const dx = tree.x - this.santa.x;
-            const dy = tree.y - this.santa.y;
-            tree.proximity = Math.sqrt(dx * dx + dy * dy);
-            
-            if (this.gamePhase === 'initial') {
-                // 0-2s: All lights stay ON
-                tree.lightsOn = true;
-            } else if (this.gamePhase === 'turningOff') {
-                // 2-12s: Trees can be turned off, but Santa can touch to turn them back on
-                if (tree.proximity < touchDistance) {
-                    // Santa touches tree - turn lights on
-                    tree.lightsOn = true;
-                }
-                // Trees that are off stay off unless Santa touches them
-            } else if (this.gamePhase === 'final') {
-                // 12-20s: Santa can turn on any remaining off trees
-                if (tree.proximity < touchDistance) {
-                    // Santa touches tree - turn lights on
-                    tree.lightsOn = true;
-                }
-                // Lights that are on stay on (no decay)
-            }
-            
             if (tree.lightsOn) {
                 lightsOnCount++;
             }
         });
         
         this.lightsOn = lightsOnCount;
-        this.lightsOnElement.textContent = lightsOnCount + '/' + this.trees.length;
+        this.lightsOnElement.textContent = lightsOnCount + '/15';
         
-        // Check game end condition
-        if (this.gameTimeRemaining <= 0) {
+        // Check game end condition at 20 seconds
+        if (this.gameTime >= 20) {
             this.endGame();
         }
     }
     
     endGame() {
         this.gameState = 'gameover';
-        const allLightsOn = this.lightsOn === this.trees.length;
+        const allLightsOn = this.lightsOn === 15;
         
         if (allLightsOn) {
             // Victory!
             document.getElementById('modalTitle').textContent = '🎄 Congratulations! 🎄';
             document.getElementById('modalMessage').textContent = "We're going to a VR Game in Antwerp with the entire family! Just need to pick a date... it's going to be awesome.";
-            document.getElementById('modalStats').textContent = `All ${this.trees.length} trees are lit!`;
+            document.getElementById('modalStats').textContent = `All 15 trees are lit!`;
             // Show VR button
             const vrButton = document.getElementById('vrButton');
             if (vrButton) {
@@ -520,11 +369,15 @@ class ChristmasTreeGame {
             }
             this.modalOverlay.classList.add('show');
         } else {
-            // Game over - reset
-            setTimeout(() => {
-                this.resetGame();
-                this.startGame();
-            }, 1000);
+            // Game over - show message and allow replay
+            document.getElementById('modalTitle').textContent = '🎄 Try Again! 🎄';
+            document.getElementById('modalMessage').textContent = `You had ${this.lightsOn} out of 15 trees lit. Keep all trees lit by 20 seconds to win!`;
+            document.getElementById('modalStats').textContent = '';
+            const vrButton = document.getElementById('vrButton');
+            if (vrButton) {
+                vrButton.style.display = 'none';
+            }
+            this.modalOverlay.classList.add('show');
         }
     }
     
@@ -542,27 +395,8 @@ class ChristmasTreeGame {
             this.drawTree(tree);
         });
         
-        // Draw Santa
+        // Draw Santa (just visual, no game impact)
         this.drawSanta();
-        
-        // Draw phase indicator
-        if (this.gameState === 'playing') {
-            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-            this.ctx.fillRect(10, 10, 200, 30);
-            this.ctx.fillStyle = '#fff';
-            this.ctx.font = '16px Arial';
-            this.ctx.textAlign = 'left';
-            
-            let phaseText = '';
-            if (this.gamePhase === 'initial') {
-                phaseText = 'Phase: All Lights On';
-            } else if (this.gamePhase === 'turningOff') {
-                phaseText = 'Phase: Trees Turning Off - Touch to Turn On!';
-            } else {
-                phaseText = 'Phase: Final - Turn On Remaining Trees!';
-            }
-            this.ctx.fillText(phaseText, 15, 30);
-        }
         
         // Draw instructions if waiting
         if (this.gameState === 'waiting') {
@@ -573,20 +407,10 @@ class ChristmasTreeGame {
             this.ctx.textAlign = 'center';
             this.ctx.fillText('Press Start to Begin!', this.canvas.width / 2, this.canvas.height / 2);
         }
-        
-        // Draw game over message briefly
-        if (this.gameState === 'gameover' && this.lightsOn < this.trees.length) {
-            this.ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
-            this.ctx.font = 'bold 32px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText('Game Over!', this.canvas.width / 2, this.canvas.height / 2);
-            this.ctx.font = '20px Arial';
-            this.ctx.fillText('Resetting...', this.canvas.width / 2, this.canvas.height / 2 + 40);
-        }
     }
     
     drawTree(tree) {
-        const { x, y, width, height, lightsOn, lightTimer } = tree;
+        const { x, y, width, height, lightsOn } = tree;
         
         // Draw tree trunk
         this.ctx.fillStyle = '#8B4513';
@@ -691,21 +515,6 @@ class ChristmasTreeGame {
     }
 }
 
-// Lock screen orientation to landscape
-function lockOrientation() {
-    if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock('landscape').catch(err => {
-            console.log('Orientation lock not supported:', err);
-        });
-    } else if (screen.lockOrientation) {
-        screen.lockOrientation('landscape');
-    } else if (screen.mozLockOrientation) {
-        screen.mozLockOrientation('landscape');
-    } else if (screen.msLockOrientation) {
-        screen.msLockOrientation('landscape');
-    }
-}
-
 // Initialize game when page loads
 (function() {
     let gameInstance = null;
@@ -723,20 +532,13 @@ function lockOrientation() {
         }
     }
     
-    // Try to lock orientation on load
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
             console.log('DOM loaded');
-            lockOrientation();
             setTimeout(initGame, 100);
         });
     } else {
         console.log('DOM already loaded');
-        lockOrientation();
         setTimeout(initGame, 100);
     }
-    
-    // Also try to lock on user interaction (required for some browsers)
-    document.addEventListener('click', lockOrientation, { once: true });
-    document.addEventListener('touchstart', lockOrientation, { once: true });
 })();
