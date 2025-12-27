@@ -128,11 +128,11 @@ class ChristmasTreeGame {
     
     // Check if two trees' hitboxes overlap more than 10%
     checkOverlap(tree1, tree2) {
-        // Tree centers are at (x, y - height/2) since trees are drawn upward from base
+        // Tree centers - same calculation as in handleTreeTap
         const center1X = tree1.x;
-        const center1Y = tree1.y - tree1.height / 2;
+        const center1Y = tree1.y + tree1.height / 3;
         const center2X = tree2.x;
-        const center2Y = tree2.y - tree2.height / 2;
+        const center2Y = tree2.y + tree2.height / 3;
         
         const dx = center1X - center2X;
         const dy = center1Y - center2Y;
@@ -244,9 +244,9 @@ class ChristmasTreeGame {
                         for (const existingTree of this.trees) {
                             // Use tree centers for distance calculation
                             const center1X = x;
-                            const center1Y = y - treeHeight / 2;
+                            const center1Y = y + treeHeight / 3;
                             const center2X = existingTree.x;
-                            const center2Y = existingTree.y - existingTree.height / 2;
+                            const center2Y = existingTree.y + existingTree.height / 3;
                             const dx = center1X - center2X;
                             const dy = center1Y - center2Y;
                             const distance = Math.sqrt(dx * dx + dy * dy);
@@ -281,9 +281,9 @@ class ChristmasTreeGame {
                     for (const existingTree of this.trees) {
                         // Use tree centers for distance calculation
                         const center1X = testX;
-                        const center1Y = testY - treeHeight / 2;
+                        const center1Y = testY + treeHeight / 3;
                         const center2X = existingTree.x;
-                        const center2Y = existingTree.y - existingTree.height / 2;
+                        const center2Y = existingTree.y + existingTree.height / 3;
                         const dx = center1X - center2X;
                         const dy = center1Y - center2Y;
                         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -320,6 +320,12 @@ class ChristmasTreeGame {
         }
         
         console.log(`Created ${this.trees.length} trees`);
+        
+        // Update display to show correct tree count
+        if (this.lightsOnElement) {
+            const lightsOnCount = this.trees.filter(t => t.lightsOn).length;
+            this.lightsOnElement.textContent = lightsOnCount + '/' + this.trees.length;
+        }
     }
     
     setupEventListeners() {
@@ -404,9 +410,14 @@ class ChristmasTreeGame {
         // Check if tap is on a tree
         let tapped = false;
         for (const tree of this.trees) {
-            // Tree center is at (x, y - height/2) since trees are drawn upward from base
+            // Tree is drawn with base at (x, y), trunk at bottom, star at top
+            // Tree extends from y - 5 (star) to y + height (trunk bottom)
+            // Visual center is approximately at y + height/2
             const treeCenterX = tree.x;
-            const treeCenterY = tree.y - tree.height / 2;
+            // Center is between the base (y) and the middle of the tree
+            // Since tree layers go from y to y + 2*height/3, and star is at y-5,
+            // the center is approximately at y + height/3
+            const treeCenterY = tree.y + tree.height / 3;
             
             const dx = x - treeCenterX;
             const dy = y - treeCenterY;
@@ -417,7 +428,7 @@ class ChristmasTreeGame {
             if (distance < hitRadius) {
                 tree.lightsOn = true;
                 tapped = true;
-                console.log('Tree tapped!', tree.index, 'center at', treeCenterX, treeCenterY, 'click at', x, y, 'distance', distance);
+                console.log('Tree tapped!', tree.index, 'center at', treeCenterX, treeCenterY, 'click at', x, y, 'distance', distance, 'hitRadius', hitRadius);
                 break;
             }
         }
@@ -433,6 +444,10 @@ class ChristmasTreeGame {
         if (this.trees.length === 0) {
             this.createTrees();
         }
+        
+        // Update display with correct tree count
+        const lightsOnCount = this.trees.filter(t => t.lightsOn).length;
+        this.lightsOnElement.textContent = lightsOnCount + '/' + this.trees.length;
         
         this.gameState = 'playing';
         this.gameTime = 0;
@@ -526,7 +541,7 @@ class ChristmasTreeGame {
             
             for (const tree of unlitTrees) {
                 const treeCenterX = tree.x;
-                const treeCenterY = tree.y - tree.height / 2;
+                const treeCenterY = tree.y + tree.height / 3;
                 const dx = treeCenterX - this.santa.x;
                 const dy = treeCenterY - this.santa.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
@@ -540,14 +555,14 @@ class ChristmasTreeGame {
             // Move towards the nearest unlit tree
             if (nearestTree) {
                 const treeCenterX = nearestTree.x;
-                const treeCenterY = nearestTree.y - nearestTree.height / 2;
+                const treeCenterY = nearestTree.y + nearestTree.height / 3;
                 const dx = treeCenterX - this.santa.x;
                 const dy = treeCenterY - this.santa.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 
                 if (distance > 10) {
                     // Increased speed - Santa moves faster
-                    const speed = 80; // pixels per second (increased from 30)
+                    const speed = 120; // pixels per second (increased from 80)
                     this.santa.speedX = (dx / distance) * speed;
                     this.santa.speedY = (dy / distance) * speed;
                     
@@ -575,7 +590,7 @@ class ChristmasTreeGame {
             const distance = Math.sqrt(dx * dx + dy * dy);
             
             if (distance > 5) {
-                const speed = 80; // pixels per second (increased from 30)
+                const speed = 120; // pixels per second (increased from 80)
                 this.santa.speedX = (dx / distance) * speed;
                 this.santa.speedY = (dy / distance) * speed;
                 
