@@ -1,13 +1,35 @@
 class ChristmasTreeGame {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d');
         this.gameArea = document.getElementById('gameArea');
         this.startButton = document.getElementById('startButton');
         this.modalOverlay = document.getElementById('modalOverlay');
         this.modalClose = document.getElementById('modalClose');
         this.lightsOnElement = document.getElementById('lightsOn');
         this.gameTimeElement = document.getElementById('gameTime');
+        
+        // Check if all required elements exist
+        if (!this.canvas || !this.gameArea || !this.startButton) {
+            console.error('Required game elements not found!', {
+                canvas: !!this.canvas,
+                gameArea: !!this.gameArea,
+                startButton: !!this.startButton
+            });
+            // Still try to set up button listener if it exists
+            if (this.startButton) {
+                this.startButton.addEventListener('click', () => {
+                    alert('Game elements not properly loaded. Please refresh the page.');
+                });
+            }
+            return;
+        }
+        
+        // Get canvas context after checking canvas exists
+        this.ctx = this.canvas.getContext('2d');
+        if (!this.ctx) {
+            console.error('Could not get canvas context!');
+            return;
+        }
         
         this.trees = [];
         this.santa = {
@@ -160,13 +182,45 @@ class ChristmasTreeGame {
     }
     
     setupEventListeners() {
-        this.startButton.addEventListener('click', async () => {
-            // On iOS, request orientation permission when starting
-            if (!this.orientationEnabled) {
-                await this.requestOrientationPermission();
+        if (!this.startButton) {
+            console.error('Start button not found!');
+            return;
+        }
+        
+        this.startButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Start button clicked!');
+            
+            try {
+                // On iOS, request orientation permission when starting
+                if (!this.orientationEnabled) {
+                    await this.requestOrientationPermission();
+                }
+                // Start the game regardless of permission status
+                this.startGame();
+            } catch (error) {
+                console.error('Error starting game:', error);
+                // Try to start anyway
+                this.startGame();
             }
-            // Start the game regardless of permission status
-            this.startGame();
+        });
+        
+        // Also add touch event for mobile
+        this.startButton.addEventListener('touchend', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Start button touched!');
+            
+            try {
+                if (!this.orientationEnabled) {
+                    await this.requestOrientationPermission();
+                }
+                this.startGame();
+            } catch (error) {
+                console.error('Error starting game:', error);
+                this.startGame();
+            }
         });
         
         this.modalClose.addEventListener('click', () => {
@@ -231,18 +285,27 @@ class ChristmasTreeGame {
     }
     
     startGame() {
+        console.log('Starting game...');
         this.gameState = 'playing';
         this.gameTime = 0;
         this.gameTimeRemaining = 20;
         this.lastTime = Date.now();
         this.gamePhase = 'initial';
         this.treesTurnedOff = 0;
-        this.startButton.disabled = true;
-        this.startButton.textContent = 'Playing...';
+        
+        if (this.startButton) {
+            this.startButton.disabled = true;
+            this.startButton.textContent = 'Playing...';
+        }
         
         // All trees start with lights ON
         this.trees.forEach(tree => {
             tree.lightsOn = true;
+        });
+        
+        console.log('Game started!', {
+            gameState: this.gameState,
+            treesCount: this.trees.length
         });
     }
     
@@ -610,21 +673,26 @@ function lockOrientation() {
     
     function initGame() {
         try {
+            console.log('Initializing game...');
             if (!gameInstance) {
                 gameInstance = new ChristmasTreeGame();
+                console.log('Game instance created:', gameInstance);
             }
         } catch (error) {
             console.error('Failed to initialize game:', error);
+            console.error('Stack:', error.stack);
         }
     }
     
     // Try to lock orientation on load
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded');
             lockOrientation();
             setTimeout(initGame, 100);
         });
     } else {
+        console.log('DOM already loaded');
         lockOrientation();
         setTimeout(initGame, 100);
     }
