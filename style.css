@@ -6,57 +6,73 @@
 
 body {
     font-family: 'Arial', sans-serif;
-    background: linear-gradient(180deg, #87CEEB 0%, #B0E0E6 30%, #E0F6FF 60%, #F0F8FF 100%);
+    background: linear-gradient(180deg, #0a1628 0%, #1a2332 25%, #2d3748 50%, #1e293b 75%, #0f172a 100%);
     background-attachment: fixed;
-    color: #2c3e50;
+    color: #fff;
     min-height: 100vh;
     overflow-x: hidden;
     position: relative;
     touch-action: none;
 }
 
-/* Snowy ground overlay */
+/* Dusk sky gradient overlay with orange and blue */
 body::after {
-    content: '';
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 35%;
-    background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.5) 30%, rgba(255, 255, 255, 0.8) 60%, rgba(255, 255, 255, 0.95) 100%);
-    pointer-events: none;
-    z-index: 0;
-}
-
-/* Optimized for portrait iPhone */
-
-/* Enhanced Christmas snowflakes background effect */
-body::before {
     content: '';
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
+    background: 
+        radial-gradient(ellipse at 50% 0%, rgba(255, 140, 0, 0.25) 0%, rgba(255, 165, 0, 0.15) 30%, transparent 60%),
+        radial-gradient(ellipse at 30% 20%, rgba(255, 69, 0, 0.2) 0%, transparent 40%),
+        radial-gradient(ellipse at 70% 15%, rgba(30, 144, 255, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 30%, rgba(70, 130, 180, 0.1) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* Dark ground overlay with subtle snow */
+body::before {
+    content: '';
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 40%;
+    background: linear-gradient(180deg, transparent 0%, rgba(15, 23, 42, 0.3) 20%, rgba(15, 23, 42, 0.6) 50%, rgba(15, 23, 42, 0.8) 80%, rgba(15, 23, 42, 0.95) 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Optimized for portrait iPhone */
+
+/* Enhanced Christmas snowflakes background effect - visible against dusk sky */
+.snowflakes {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background-image: 
-        radial-gradient(3px 3px at 20% 30%, rgba(255, 255, 255, 0.9), transparent),
-        radial-gradient(2px 2px at 60% 70%, rgba(255, 255, 255, 0.8), transparent),
-        radial-gradient(2px 2px at 50% 50%, rgba(255, 255, 255, 0.7), transparent),
-        radial-gradient(1px 1px at 80% 10%, rgba(255, 255, 255, 0.6), transparent),
-        radial-gradient(3px 3px at 90% 40%, rgba(255, 255, 255, 0.9), transparent),
-        radial-gradient(2px 2px at 33% 60%, rgba(255, 255, 255, 0.7), transparent),
-        radial-gradient(1px 1px at 55% 80%, rgba(255, 255, 255, 0.6), transparent),
-        radial-gradient(4px 4px at 10% 50%, rgba(255, 255, 255, 0.5), transparent),
-        radial-gradient(2px 2px at 70% 20%, rgba(255, 255, 255, 0.6), transparent),
-        radial-gradient(2px 2px at 40% 80%, rgba(255, 255, 255, 0.7), transparent),
-        radial-gradient(1px 1px at 15% 60%, rgba(255, 255, 255, 0.5), transparent),
-        radial-gradient(3px 3px at 85% 30%, rgba(255, 255, 255, 0.8), transparent);
+        radial-gradient(3px 3px at 20% 30%, rgba(255, 255, 255, 0.95), transparent),
+        radial-gradient(2px 2px at 60% 70%, rgba(255, 255, 255, 0.85), transparent),
+        radial-gradient(2px 2px at 50% 50%, rgba(255, 255, 255, 0.8), transparent),
+        radial-gradient(1px 1px at 80% 10%, rgba(255, 255, 255, 0.7), transparent),
+        radial-gradient(3px 3px at 90% 40%, rgba(255, 255, 255, 0.95), transparent),
+        radial-gradient(2px 2px at 33% 60%, rgba(255, 255, 255, 0.8), transparent),
+        radial-gradient(1px 1px at 55% 80%, rgba(255, 255, 255, 0.7), transparent),
+        radial-gradient(4px 4px at 10% 50%, rgba(255, 255, 255, 0.6), transparent),
+        radial-gradient(2px 2px at 70% 20%, rgba(255, 255, 255, 0.75), transparent),
+        radial-gradient(2px 2px at 40% 80%, rgba(255, 255, 255, 0.8), transparent),
+        radial-gradient(1px 1px at 15% 60%, rgba(255, 255, 255, 0.65), transparent),
+        radial-gradient(3px 3px at 85% 30%, rgba(255, 255, 255, 0.9), transparent);
     background-repeat: repeat;
     background-size: 400px 400px;
     animation: snow 30s linear infinite;
-    opacity: 0.6;
+    opacity: 0.7;
     pointer-events: none;
-    z-index: 1;
+    z-index: 2;
 }
 
 @keyframes snow {
@@ -69,7 +85,7 @@ body::before {
 
 .container {
     position: relative;
-    z-index: 2;
+    z-index: 3;
     max-width: 100%;
     margin: 0 auto;
     padding: 8px;
@@ -93,8 +109,16 @@ body::before {
     height: 6px;
     border-radius: 50%;
     animation: twinkle 2s ease-in-out infinite;
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
-    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 10px currentColor;
+    background: currentColor;
+}
+
+.christmas-light:nth-child(odd) {
+    color: #ffa500;
+}
+
+.christmas-light:nth-child(even) {
+    color: #1e90ff;
 }
 
 .christmas-light:nth-child(1) { top: 10%; left: 5%; animation-delay: 0s; }
@@ -146,14 +170,14 @@ header {
     font-size: 1.5em;
     font-weight: bold;
     text-shadow: 
-        0 2px 4px rgba(0, 0, 0, 0.3),
-        0 0 10px rgba(255, 255, 255, 0.8),
-        0 0 20px rgba(255, 255, 255, 0.6),
-        0 0 30px rgba(220, 20, 60, 0.4);
-    color: #c41e3a;
+        0 2px 4px rgba(0, 0, 0, 0.8),
+        0 0 20px rgba(255, 140, 0, 0.8),
+        0 0 30px rgba(255, 140, 0, 0.6),
+        0 0 40px rgba(30, 144, 255, 0.4);
+    color: #ffa500;
     animation: titleGlow 2s ease-in-out infinite alternate;
     margin-bottom: 8px;
-    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
+    filter: drop-shadow(0 0 8px rgba(255, 140, 0, 0.6));
 }
 
 @media (max-width: 480px) {
@@ -166,18 +190,18 @@ header {
 @keyframes titleGlow {
     0% { 
         text-shadow: 
-            0 2px 4px rgba(0, 0, 0, 0.3),
-            0 0 10px rgba(255, 255, 255, 0.8),
-            0 0 20px rgba(255, 255, 255, 0.6),
-            0 0 30px rgba(220, 20, 60, 0.4);
+            0 2px 4px rgba(0, 0, 0, 0.8),
+            0 0 20px rgba(255, 140, 0, 0.8),
+            0 0 30px rgba(255, 140, 0, 0.6),
+            0 0 40px rgba(30, 144, 255, 0.4);
     }
     100% { 
         text-shadow: 
-            0 2px 4px rgba(0, 0, 0, 0.3),
-            0 0 15px rgba(255, 255, 255, 1),
-            0 0 25px rgba(255, 255, 255, 0.8),
-            0 0 35px rgba(220, 20, 60, 0.6),
-            0 0 45px rgba(220, 20, 60, 0.4);
+            0 2px 4px rgba(0, 0, 0, 0.8),
+            0 0 25px rgba(255, 140, 0, 1),
+            0 0 35px rgba(255, 140, 0, 0.8),
+            0 0 45px rgba(30, 144, 255, 0.6),
+            0 0 55px rgba(30, 144, 255, 0.4);
     }
 }
 
@@ -197,18 +221,18 @@ header {
 
 .score-label {
     font-size: 0.75em;
-    color: #2c3e50;
-    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+    color: #e0e0e0;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .score-value {
     font-size: 1.2em;
     font-weight: bold;
-    color: #2c5f2d;
+    color: #4ade80;
     text-shadow: 
-        0 2px 4px rgba(0, 0, 0, 0.3),
-        0 0 10px rgba(44, 95, 45, 0.6),
-        0 0 20px rgba(44, 95, 45, 0.4);
+        0 2px 4px rgba(0, 0, 0, 0.8),
+        0 0 12px rgba(74, 222, 128, 0.9),
+        0 0 24px rgba(74, 222, 128, 0.7);
     animation: pulse 2s ease-in-out infinite;
 }
 
@@ -238,13 +262,15 @@ header {
     height: 60vh;
     min-height: 400px;
     max-height: 70vh;
-    background: linear-gradient(180deg, #E8F4F8 0%, #D4E8F0 50%, #B8D4E3 100%);
-    border: 3px solid rgba(255, 255, 255, 0.8);
+    background: linear-gradient(180deg, #1a2332 0%, #2d3748 30%, #1e293b 60%, #0f172a 100%);
+    border: 2px solid;
+    border-image: linear-gradient(135deg, rgba(255, 140, 0, 0.6), rgba(30, 144, 255, 0.6), rgba(255, 140, 0, 0.6)) 1;
     border-radius: 15px;
     box-shadow: 
-        0 8px 32px rgba(0, 0, 0, 0.2),
-        0 0 20px rgba(255, 255, 255, 0.5),
-        inset 0 2px 10px rgba(255, 255, 255, 0.3);
+        0 8px 32px rgba(0, 0, 0, 0.7),
+        0 0 40px rgba(255, 140, 0, 0.2),
+        0 0 40px rgba(30, 144, 255, 0.15),
+        inset 0 2px 10px rgba(0, 0, 0, 0.5);
     overflow: hidden;
     margin-bottom: 10px;
     touch-action: none;
@@ -302,16 +328,16 @@ header {
 
 .instruction {
     font-size: 0.9em;
-    color: #2c3e50;
-    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+    color: #e0e0e0;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
     margin-bottom: 5px;
     padding: 0 10px;
 }
 
 .instruction-small {
     font-size: 0.75em;
-    color: #34495e;
-    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+    color: #c0c0c0;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
     margin-bottom: 10px;
     padding: 0 10px;
 }
@@ -329,25 +355,26 @@ header {
 }
 
 .start-button {
-    background: linear-gradient(135deg, #c41e3a 0%, #8b1538 50%, #c41e3a 100%);
+    background: linear-gradient(135deg, #ff8c00 0%, #ff6b35 50%, #ff8c00 100%);
     background-size: 200% 200%;
     color: white;
-    border: 2px solid rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(30, 144, 255, 0.6);
     padding: 12px 30px;
     font-size: 1em;
     border-radius: 20px;
     cursor: pointer;
     box-shadow: 
-        0 4px 15px rgba(0, 0, 0, 0.3),
-        0 0 20px rgba(255, 255, 255, 0.5),
-        inset 0 2px 5px rgba(255, 255, 255, 0.3);
+        0 4px 15px rgba(0, 0, 0, 0.5),
+        0 0 25px rgba(255, 140, 0, 0.5),
+        0 0 15px rgba(30, 144, 255, 0.3),
+        inset 0 2px 5px rgba(255, 255, 255, 0.2);
     transition: all 0.3s;
     font-weight: bold;
     -webkit-tap-highlight-color: transparent;
     animation: buttonShimmer 3s ease-in-out infinite;
     position: relative;
     overflow: hidden;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
 }
 
 @keyframes buttonShimmer {
@@ -408,15 +435,17 @@ header {
 }
 
 .modal-content {
-    background: linear-gradient(135deg, #E8F4F8 0%, #D4E8F0 100%);
-    border: 3px solid rgba(255, 255, 255, 0.9);
+    background: linear-gradient(135deg, #1a2332 0%, #2d3748 100%);
+    border: 2px solid;
+    border-image: linear-gradient(135deg, rgba(255, 140, 0, 0.6), rgba(30, 144, 255, 0.6)) 1;
     border-radius: 15px;
     padding: 25px;
     max-width: 500px;
     width: 90%;
     box-shadow: 
-        0 8px 32px rgba(0, 0, 0, 0.3),
-        0 0 20px rgba(255, 255, 255, 0.5);
+        0 8px 32px rgba(0, 0, 0, 0.8),
+        0 0 40px rgba(255, 140, 0, 0.3),
+        0 0 40px rgba(30, 144, 255, 0.2);
     animation: modalSlideIn 0.4s ease-out;
     text-align: center;
 }
@@ -441,12 +470,13 @@ header {
 }
 
 .modal-header h2 {
-    color: #c41e3a;
+    color: #ffa500;
     font-size: 1.5em;
     margin-bottom: 15px;
     text-shadow: 
-        0 2px 4px rgba(0, 0, 0, 0.2),
-        0 0 10px rgba(255, 255, 255, 0.8);
+        0 2px 4px rgba(0, 0, 0, 0.8),
+        0 0 20px rgba(255, 140, 0, 0.8),
+        0 0 30px rgba(30, 144, 255, 0.4);
 }
 
 @media (max-width: 480px) {
@@ -463,9 +493,9 @@ header {
 .modal-body p {
     font-size: 1em;
     margin-bottom: 12px;
-    color: #2c3e50;
+    color: #e0e0e0;
     line-height: 1.5;
-    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 @media (max-width: 480px) {
@@ -476,11 +506,11 @@ header {
 }
 
 .modal-subtitle {
-    color: #2c5f2d !important;
+    color: #4ade80 !important;
     font-weight: bold;
     text-shadow: 
-        0 2px 4px rgba(0, 0, 0, 0.2),
-        0 0 10px rgba(44, 95, 45, 0.4);
+        0 2px 4px rgba(0, 0, 0, 0.8),
+        0 0 12px rgba(74, 222, 128, 0.8);
 }
 
 .modal-buttons {
@@ -491,20 +521,23 @@ header {
 }
 
 .modal-button {
-    background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+    background: linear-gradient(135deg, #ff8c00 0%, #ff6b35 100%);
     color: white;
-    border: none;
+    border: 2px solid rgba(30, 144, 255, 0.5);
     padding: 12px 30px;
     font-size: 1em;
     border-radius: 20px;
     cursor: pointer;
-    box-shadow: 0 4px 15px rgba(255, 68, 68, 0.4);
+    box-shadow: 
+        0 4px 15px rgba(0, 0, 0, 0.5),
+        0 0 20px rgba(255, 140, 0, 0.4);
     transition: all 0.3s;
     text-decoration: none;
     display: inline-block;
     text-align: center;
     font-weight: bold;
     -webkit-tap-highlight-color: transparent;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
 }
 
 @media (max-width: 480px) {
@@ -525,8 +558,11 @@ header {
 }
 
 .vr-button {
-    background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
-    box-shadow: 0 4px 15px rgba(0, 255, 0, 0.4);
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+    border: 2px solid rgba(30, 144, 255, 0.5);
+    box-shadow: 
+        0 4px 15px rgba(0, 0, 0, 0.5),
+        0 0 20px rgba(74, 222, 128, 0.4);
     display: none; /* Hidden by default, shown on victory */
 }
 
