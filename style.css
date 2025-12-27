@@ -14,6 +14,27 @@ body {
     touch-action: none;
 }
 
+/* Force landscape orientation */
+@media screen and (orientation: portrait) {
+    body::after {
+        content: 'Please rotate your device to landscape mode to play!';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 24px;
+        text-align: center;
+        padding: 20px;
+    }
+}
+
 /* Christmas snowflakes background effect */
 body::before {
     content: '';
@@ -253,7 +274,14 @@ header {
     text-shadow: 0 0 10px rgba(0, 255, 0, 0.6);
 }
 
-.modal-close {
+.modal-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+}
+
+.modal-button {
     background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
     color: white;
     border: none;
@@ -263,15 +291,33 @@ header {
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(255, 68, 68, 0.4);
     transition: all 0.3s;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    font-weight: bold;
 }
 
-.modal-close:hover {
+.modal-button:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(255, 68, 68, 0.6);
 }
 
-.modal-close:active {
+.modal-button:active {
     transform: translateY(0);
+}
+
+.vr-button {
+    background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
+    box-shadow: 0 4px 15px rgba(0, 255, 0, 0.4);
+    display: none; /* Hidden by default, shown on victory */
+}
+
+.vr-button:hover {
+    box-shadow: 0 6px 20px rgba(0, 255, 0, 0.6);
+}
+
+.modal-close {
+    background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
 }
 
 @media (max-width: 768px) {

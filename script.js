@@ -33,6 +33,7 @@ class ChristmasTreeGame {
         this.tiltSensitivity = 0.02;
         this.gamePhase = 'initial'; // initial, turningOff, final
         this.treesTurnedOff = 0; // Track how many trees have been turned off
+        this.orientationEnabled = false; // Track if orientation is enabled
         
         this.setupCanvas();
         this.loadSantaImage();
@@ -94,25 +95,39 @@ class ChristmasTreeGame {
         // Request permission for device orientation (iOS 13+)
         if (typeof DeviceOrientationEvent !== 'undefined' && 
             typeof DeviceOrientationEvent.requestPermission === 'function') {
-            this.startButton.addEventListener('click', async () => {
-                try {
-                    const permission = await DeviceOrientationEvent.requestPermission();
-                    if (permission === 'granted') {
-                        this.enableOrientation();
-                    }
-                } catch (error) {
-                    console.error('Permission denied:', error);
-                    // Fallback to touch controls
-                    this.enableTouchControls();
-                }
-            });
+            // iOS 13+ - request permission on first user interaction
+            // Permission will be requested when start button is clicked
+            // For now, enable touch controls as fallback
+            this.enableTouchControls();
         } else {
-            // Android or older iOS
+            // Android or older iOS - enable immediately
             this.enableOrientation();
         }
     }
     
+    async requestOrientationPermission() {
+        if (typeof DeviceOrientationEvent !== 'undefined' && 
+            typeof DeviceOrientationEvent.requestPermission === 'function') {
+            try {
+                const permission = await DeviceOrientationEvent.requestPermission();
+                if (permission === 'granted') {
+                    this.enableOrientation();
+                    return true;
+                } else {
+                    // Permission denied - keep using touch controls
+                    return false;
+                }
+            } catch (error) {
+                console.error('Permission error:', error);
+                // Keep using touch controls
+                return false;
+            }
+        }
+        return false;
+    }
+    
     enableOrientation() {
+        this.orientationEnabled = true;
         window.addEventListener('deviceorientation', (e) => {
             if (this.gameState === 'playing') {
                 // Use gamma (left/right tilt) for movement
@@ -145,18 +160,33 @@ class ChristmasTreeGame {
     }
     
     setupEventListeners() {
-        this.startButton.addEventListener('click', () => {
+        this.startButton.addEventListener('click', async () => {
+            // On iOS, request orientation permission when starting
+            if (!this.orientationEnabled) {
+                await this.requestOrientationPermission();
+            }
+            // Start the game regardless of permission status
             this.startGame();
         });
         
         this.modalClose.addEventListener('click', () => {
             this.modalOverlay.classList.remove('show');
+            // Hide VR button when closing modal
+            const vrButton = document.getElementById('vrButton');
+            if (vrButton) {
+                vrButton.style.display = 'none';
+            }
             this.resetGame();
         });
         
         this.modalOverlay.addEventListener('click', (e) => {
             if (e.target === this.modalOverlay) {
                 this.modalOverlay.classList.remove('show');
+                // Hide VR button when closing modal
+                const vrButton = document.getElementById('vrButton');
+                if (vrButton) {
+                    vrButton.style.display = 'none';
+                }
             }
         });
         
@@ -379,8 +409,13 @@ class ChristmasTreeGame {
         if (allLightsOn) {
             // Victory!
             document.getElementById('modalTitle').textContent = '🎄 Congratulations! 🎄';
-            document.getElementById('modalMessage').textContent = 'You kept all the lights on!';
+            document.getElementById('modalMessage').textContent = "We're going to a VR Game in Antwerp with the entire family! Just need to pick a date... it's going to be awesome.";
             document.getElementById('modalStats').textContent = `All ${this.trees.length} trees are lit!`;
+            // Show VR button
+            const vrButton = document.getElementById('vrButton');
+            if (vrButton) {
+                vrButton.style.display = 'inline-block';
+            }
             this.modalOverlay.classList.add('show');
         } else {
             // Game over - reset
@@ -554,19 +589,47 @@ class ChristmasTreeGame {
     }
 }
 
+// Lock screen orientation to landscape
+function lockOrientation() {
+    if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(err => {
+            console.log('Orientation lock not supported:', err);
+        });
+    } else if (screen.lockOrientation) {
+        screen.lockOrientation('landscape');
+    } else if (screen.mozLockOrientation) {
+        screen.mozLockOrientation('landscape');
+    } else if (screen.msLockOrientation) {
+        screen.msLockOrientation('landscape');
+    }
+}
+
 // Initialize game when page loads
 (function() {
+    let gameInstance = null;
+    
     function initGame() {
         try {
-            new ChristmasTreeGame();
+            if (!gameInstance) {
+                gameInstance = new ChristmasTreeGame();
+            }
         } catch (error) {
             console.error('Failed to initialize game:', error);
         }
     }
     
+    // Try to lock orientation on load
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initGame);
+        document.addEventListener('DOMContentLoaded', () => {
+            lockOrientation();
+            setTimeout(initGame, 100);
+        });
     } else {
-        setTimeout(initGame, 0);
+        lockOrientation();
+        setTimeout(initGame, 100);
     }
+    
+    // Also try to lock on user interaction (required for some browsers)
+    document.addEventListener('click', lockOrientation, { once: true });
+    document.addEventListener('touchstart', lockOrientation, { once: true });
 })();
