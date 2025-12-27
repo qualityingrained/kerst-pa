@@ -475,24 +475,26 @@ class ChristmasTreeGame {
         
         console.log('Game started with', this.trees.length, 'trees');
         
-        // Schedule trees to turn off: one per second from 2s until 1 second before end (19s)
+        // Schedule trees to turn off: from 2s until 19s (inclusive)
         // Game ends at 20s, so trees turn off until 19s
         // Schedule based on actual number of trees placed
         const treeCount = this.trees.length;
-        const gameDuration = 20; // Total game time in seconds
-        const lastTurnOffSecond = gameDuration - 1; // 19 seconds (1 second before end)
+        const startTurnOffSecond = 2; // Start turning off at 2 seconds
+        const lastTurnOffSecond = 19; // Turn off until 19 seconds (inclusive)
         
         // Calculate how many seconds we have to turn off trees (from 2s to 19s = 18 seconds)
-        const turnOffDuration = lastTurnOffSecond - 2 + 1; // 18 seconds (2, 3, 4, ..., 19)
+        const turnOffDuration = lastTurnOffSecond - startTurnOffSecond + 1; // 18 seconds (2, 3, 4, ..., 19)
         
-        // Turn off trees one per second, but if we have more trees than seconds,
-        // we'll turn off multiple trees in the same second
+        // Distribute trees across seconds 2 through 19
+        // If we have more trees than seconds, multiple trees will turn off in the same second
         for (let i = 0; i < treeCount; i++) {
-            // Distribute trees across the available seconds
+            // Distribute trees across the available seconds (0 to 17, which maps to 2 to 19)
             const secondIndex = i % turnOffDuration;
-            const turnOffTime = 2 + secondIndex;
+            const turnOffTime = startTurnOffSecond + secondIndex; // This gives values from 2 to 19
             this.treesToTurnOff.push(turnOffTime);
         }
+        
+        console.log('Trees scheduled to turn off:', this.treesToTurnOff.sort((a, b) => a - b));
         
         console.log('Game started!', {
             gameState: this.gameState,
@@ -526,10 +528,11 @@ class ChristmasTreeGame {
         
         // Turn off trees according to schedule
         // Check if it's time to turn off the next tree
-        // Trees turn off from 2s until 1 second before end (19s)
+        // Trees turn off from 2s until 19s (inclusive)
         const currentSecond = Math.floor(this.gameTime);
-        const lastTurnOffSecond = 19; // 1 second before game ends at 20s
+        const lastTurnOffSecond = 19; // Trees turn off until 19 seconds
         
+        // Allow trees to turn off from 2s to 19s (inclusive)
         if (currentSecond >= 2 && currentSecond <= lastTurnOffSecond && currentSecond !== this.lastTurnOffTime) {
             // Find all trees scheduled to turn off at this second
             const treesToTurnOffNow = this.treesToTurnOff.filter(time => time === currentSecond);
@@ -658,7 +661,7 @@ class ChristmasTreeGame {
         
         if (this.santaTapped) {
             // Santa was tapped - instant game over
-            document.getElementById('modalTitle').textContent = '🎄 Oh No! 🎄';
+            document.getElementById('modalTitle').textContent = 'Oh No!';
             document.getElementById('modalMessage').textContent = "You tapped Santa! Don't let him catch you - he's trying to turn off the lights!";
             document.getElementById('modalStats').textContent = `You had ${this.lightsOn} out of ${treeCount} trees lit.`;
             const vrButton = document.getElementById('vrButton');
@@ -668,7 +671,7 @@ class ChristmasTreeGame {
             this.modalOverlay.classList.add('show');
         } else if (allLightsOn) {
             // Victory!
-            document.getElementById('modalTitle').textContent = '🎄 Congratulations! 🎄';
+            document.getElementById('modalTitle').textContent = 'Congratulations!';
             document.getElementById('modalMessage').textContent = "We're going to a VR Game in Antwerp with the entire family! Just need to pick a date... it's going to be awesome.";
             document.getElementById('modalStats').textContent = `All ${treeCount} trees are lit!`;
             // Show VR button
@@ -679,7 +682,7 @@ class ChristmasTreeGame {
             this.modalOverlay.classList.add('show');
         } else {
             // Game over - time ran out
-            document.getElementById('modalTitle').textContent = '🎄 Try Again! 🎄';
+            document.getElementById('modalTitle').textContent = 'Try Again!';
             document.getElementById('modalMessage').textContent = `You had ${this.lightsOn} out of ${treeCount} trees lit. Keep all trees lit by 20 seconds to win!`;
             document.getElementById('modalStats').textContent = '';
             const vrButton = document.getElementById('vrButton');
