@@ -86,19 +86,61 @@ class ChristmasTreeGame {
         };
     }
     
-    // Check if two trees overlap more than 10%
+    // Calculate hitbox radius for a tree (same as in handleTreeTap)
+    getHitboxRadius(tree) {
+        return Math.max(tree.width / 2, tree.height / 2) + 30;
+    }
+    
+    // Calculate overlap area of two circles
+    calculateCircleOverlap(r1, r2, distance) {
+        if (distance >= r1 + r2) return 0; // No overlap
+        if (distance <= Math.abs(r1 - r2)) {
+            // One circle is inside the other
+            const smallerRadius = Math.min(r1, r2);
+            return Math.PI * smallerRadius * smallerRadius;
+        }
+        
+        // Calculate intersection area of two circles
+        const d = distance;
+        const r1Sq = r1 * r1;
+        const r2Sq = r2 * r2;
+        
+        const d1 = (r1Sq - r2Sq + d * d) / (2 * d);
+        const d2 = d - d1;
+        
+        const h = Math.sqrt(r1Sq - d1 * d1);
+        
+        const area1 = r1Sq * Math.acos(d1 / r1) - d1 * h;
+        const area2 = r2Sq * Math.acos(d2 / r2) - d2 * h;
+        
+        return area1 + area2;
+    }
+    
+    // Check if two trees' hitboxes overlap more than 10%
     checkOverlap(tree1, tree2) {
         const dx = tree1.x - tree2.x;
         const dy = tree1.y - tree2.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        // 10% overlap means distance should be at least 90% of combined radius
-        const minDistance = (tree1.width + tree2.width) * 0.45; // Half width = radius, so combined radius * 0.9
-        return distance < minDistance;
+        
+        const r1 = this.getHitboxRadius(tree1);
+        const r2 = this.getHitboxRadius(tree2);
+        
+        // Calculate overlap area
+        const overlapArea = this.calculateCircleOverlap(r1, r2, distance);
+        
+        // Calculate area of smaller hitbox
+        const smallerRadius = Math.min(r1, r2);
+        const smallerArea = Math.PI * smallerRadius * smallerRadius;
+        
+        // Check if overlap is more than 10% of smaller hitbox
+        const overlapPercentage = (overlapArea / smallerArea) * 100;
+        
+        return overlapPercentage > 10;
     }
     
     createTrees() {
         this.trees = [];
-        const treeCount = 15;
+        const treeCount = 10;
         const maxAttempts = 1000; // Prevent infinite loops
         const treeWidth = 60;
         const treeHeight = 80;
@@ -191,8 +233,10 @@ class ChristmasTreeGame {
             if (this.gameState === 'playing') {
                 const rect = this.canvas.getBoundingClientRect();
                 const touch = e.touches[0];
-                const x = touch.clientX - rect.left;
-                const y = touch.clientY - rect.top;
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                const x = (touch.clientX - rect.left) * scaleX;
+                const y = (touch.clientY - rect.top) * scaleY;
                 this.handleTreeTap(x, y);
             }
         });
@@ -201,8 +245,11 @@ class ChristmasTreeGame {
         this.canvas.addEventListener('click', (e) => {
             if (this.gameState === 'playing') {
                 const rect = this.canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+                console.log('Click at:', x, y, 'Canvas size:', this.canvas.width, this.canvas.height, 'Display size:', rect.width, rect.height);
                 this.handleTreeTap(x, y);
             }
         });
@@ -210,22 +257,34 @@ class ChristmasTreeGame {
     
     handleTreeTap(x, y) {
         // Check if tap is on a tree
+        let tapped = false;
         for (const tree of this.trees) {
             const dx = x - tree.x;
             const dy = y - tree.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
-            // Check if tap is within tree bounds (using a generous hit area)
-            if (distance < tree.width / 2 + 20) {
+            // Check if tap is within tree hitbox (same calculation as in checkOverlap)
+            const hitRadius = this.getHitboxRadius(tree);
+            if (distance < hitRadius) {
                 tree.lightsOn = true;
-                // Visual feedback could be added here
+                tapped = true;
+                console.log('Tree tapped!', tree.index, 'at', tree.x, tree.y, 'click at', x, y, 'distance', distance);
                 break;
             }
+        }
+        if (!tapped) {
+            console.log('No tree tapped at', x, y);
         }
     }
     
     startGame() {
         console.log('Starting game...');
+        
+        // Make sure trees are created
+        if (this.trees.length === 0) {
+            this.createTrees();
+        }
+        
         this.gameState = 'playing';
         this.gameTime = 0;
         this.lastTime = Date.now();
@@ -249,10 +308,12 @@ class ChristmasTreeGame {
             tree.lightsOn = true;
         });
         
+        console.log('Game started with', this.trees.length, 'trees');
+        
         // Schedule trees to turn off: one per second from 2s to 18s
-        // That's 16 trees, but we only have 15, so all will be off by 17s
-        for (let i = 0; i < 15; i++) {
-            const turnOffTime = 2 + i; // 2s, 3s, 4s, ..., 16s
+        // We have 10 trees, so they'll turn off at 2s, 3s, 4s, ..., 11s
+        for (let i = 0; i < 10; i++) {
+            const turnOffTime = 2 + i; // 2s, 3s, 4s, ..., 11s
             this.treesToTurnOff.push(turnOffTime);
         }
         
@@ -345,7 +406,7 @@ class ChristmasTreeGame {
         });
         
         this.lightsOn = lightsOnCount;
-        this.lightsOnElement.textContent = lightsOnCount + '/15';
+        this.lightsOnElement.textContent = lightsOnCount + '/10';
         
         // Check game end condition at 20 seconds
         if (this.gameTime >= 20) {
@@ -355,13 +416,13 @@ class ChristmasTreeGame {
     
     endGame() {
         this.gameState = 'gameover';
-        const allLightsOn = this.lightsOn === 15;
+        const allLightsOn = this.lightsOn === 10;
         
         if (allLightsOn) {
             // Victory!
             document.getElementById('modalTitle').textContent = '🎄 Congratulations! 🎄';
             document.getElementById('modalMessage').textContent = "We're going to a VR Game in Antwerp with the entire family! Just need to pick a date... it's going to be awesome.";
-            document.getElementById('modalStats').textContent = `All 15 trees are lit!`;
+            document.getElementById('modalStats').textContent = `All 10 trees are lit!`;
             // Show VR button
             const vrButton = document.getElementById('vrButton');
             if (vrButton) {
@@ -371,7 +432,7 @@ class ChristmasTreeGame {
         } else {
             // Game over - show message and allow replay
             document.getElementById('modalTitle').textContent = '🎄 Try Again! 🎄';
-            document.getElementById('modalMessage').textContent = `You had ${this.lightsOn} out of 15 trees lit. Keep all trees lit by 20 seconds to win!`;
+            document.getElementById('modalMessage').textContent = `You had ${this.lightsOn} out of 10 trees lit. Keep all trees lit by 20 seconds to win!`;
             document.getElementById('modalStats').textContent = '';
             const vrButton = document.getElementById('vrButton');
             if (vrButton) {
