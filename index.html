@@ -2,49 +2,51 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pa's Christmas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Pa's Christmas - Keep the Lights On!</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1 class="title">🎄 Pa's Christmas 🎄</h1>
+            <h1 class="title">🎄 Keep the Lights On! 🎄</h1>
+            <div class="score-board">
+                <div class="score-item">
+                    <span class="score-label">Lights On:</span>
+                    <span class="score-value" id="lightsOn">0</span>
+                </div>
+                <div class="score-item">
+                    <span class="score-label">Time:</span>
+                    <span class="score-value" id="gameTime">0s</span>
+                </div>
+            </div>
         </header>
         
         <div class="game-area" id="gameArea">
-            <canvas id="laserCanvas" class="laser-canvas"></canvas>
-            <div class="laser-source" id="laserSource">
-                <div class="laser-source-core"></div>
-                <div class="laser-direction-indicator" id="laserIndicator"></div>
-            </div>
-            <div class="endpoint" id="endpoint">
-                <div class="endpoint-glow" id="endpointGlow"></div>
-                <div class="endpoint-core" id="endpointCore"></div>
-            </div>
+            <canvas id="gameCanvas"></canvas>
         </div>
         
         <div class="controls">
-            <p class="instruction">Rotate the laser source to aim. Drag mirrors to position them. Bounce the laser to the endpoint!</p>
+            <p class="instruction">Tilt your phone left and right to move Santa!</p>
+            <p class="instruction-small">Keep Santa near the trees to keep the lights on! ✨</p>
+            <button id="startButton" class="start-button">Start Game</button>
         </div>
     </div>
     
-    <!-- Modal -->
+    <!-- Game Over Modal -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>🎮 VR Gaming Adventure! 🎮</h2>
+                <h2 id="modalTitle">🎄 Great Job! 🎄</h2>
             </div>
             <div class="modal-body">
-                <p>Congratulations! You've successfully charged the endpoint!</p>
-                <p>We're going VR gaming - we'll flesh out the details later.</p>
-                <p class="modal-subtitle">Get ready for an amazing experience! 🚀</p>
+                <p id="modalMessage">You kept the lights on!</p>
+                <p class="modal-subtitle" id="modalStats"></p>
             </div>
-            <button class="modal-close" id="modalClose">Close</button>
+            <button class="modal-close" id="modalClose">Play Again</button>
         </div>
     </div>
     
     <script src="script.js"></script>
 </body>
 </html>
-

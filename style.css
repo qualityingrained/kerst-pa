@@ -11,6 +11,7 @@ body {
     min-height: 100vh;
     overflow-x: hidden;
     position: relative;
+    touch-action: none;
 }
 
 /* Christmas snowflakes background effect */
@@ -45,19 +46,19 @@ body::before {
 .container {
     position: relative;
     z-index: 1;
-    max-width: 1200px;
+    max-width: 100%;
     margin: 0 auto;
-    padding: 20px;
+    padding: 10px;
 }
 
 header {
     text-align: center;
-    margin-bottom: 30px;
-    padding: 20px;
+    margin-bottom: 15px;
+    padding: 15px;
 }
 
 .title {
-    font-size: 3em;
+    font-size: 2em;
     font-weight: bold;
     text-shadow: 
         0 0 10px rgba(255, 0, 0, 0.8),
@@ -65,6 +66,7 @@ header {
         0 0 30px rgba(255, 0, 0, 0.4);
     color: #ff4444;
     animation: titleGlow 2s ease-in-out infinite alternate;
+    margin-bottom: 10px;
 }
 
 @keyframes titleGlow {
@@ -83,10 +85,38 @@ header {
     }
 }
 
+.score-board {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-top: 10px;
+}
+
+.score-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.score-label {
+    font-size: 0.9em;
+    color: #aaa;
+}
+
+.score-value {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #00ff00;
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.6);
+}
+
 .game-area {
     position: relative;
     width: 100%;
-    height: 600px;
+    height: 60vh;
+    min-height: 400px;
+    max-height: 600px;
     background: radial-gradient(circle at center, #1a1a2e 0%, #0a0a0a 100%);
     border: 3px solid #ff4444;
     border-radius: 15px;
@@ -94,217 +124,60 @@ header {
         0 0 20px rgba(255, 68, 68, 0.5),
         inset 0 0 30px rgba(0, 0, 0, 0.5);
     overflow: hidden;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
+    touch-action: none;
 }
 
-.laser-canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
+#gameCanvas {
     width: 100%;
     height: 100%;
-    pointer-events: none;
-    z-index: 2;
-}
-
-.mirror {
-    position: absolute;
-    width: 80px;
-    height: 8px;
-    background: linear-gradient(90deg, #c0c0c0 0%, #ffffff 50%, #c0c0c0 100%);
-    border: 2px solid #888;
-    border-radius: 4px;
-    cursor: move;
-    touch-action: none;
-    user-select: none;
-    box-shadow: 
-        0 0 10px rgba(255, 255, 255, 0.5),
-        inset 0 0 10px rgba(255, 255, 255, 0.3);
-    z-index: 3;
-    transform-origin: center;
-    transition: box-shadow 0.2s;
-}
-
-.mirror:hover {
-    box-shadow: 
-        0 0 15px rgba(255, 255, 255, 0.8),
-        inset 0 0 15px rgba(255, 255, 255, 0.5);
-}
-
-.mirror.dragging {
-    opacity: 0.8;
-    cursor: grabbing;
-}
-
-.obstacle {
-    position: absolute;
-    background: linear-gradient(135deg, #333 0%, #555 100%);
-    border: 2px solid #666;
-    border-radius: 8px;
-    box-shadow: 
-        0 0 15px rgba(0, 0, 0, 0.8),
-        inset 0 0 10px rgba(0, 0, 0, 0.5);
-    z-index: 3;
-    pointer-events: none;
-}
-
-.laser-source {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 50px;
-    height: 50px;
-    z-index: 5;
-    cursor: pointer;
-    touch-action: none;
-    user-select: none;
-}
-
-.laser-source-core {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 40px;
-    height: 40px;
-    background: radial-gradient(circle, #ff0000 0%, #cc0000 100%);
-    border: 3px solid #ff4444;
-    border-radius: 50%;
-    box-shadow: 
-        0 0 20px rgba(255, 0, 0, 0.8),
-        0 0 40px rgba(255, 0, 0, 0.4);
-    animation: laserPulse 1.5s ease-in-out infinite;
-}
-
-.laser-direction-indicator {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 4px;
-    height: 30px;
-    background: linear-gradient(to bottom, #ff0000, rgba(255, 0, 0, 0));
-    transform-origin: top center;
-    transform: translate(-50%, -100%) rotate(90deg);
-    border-radius: 2px;
-    box-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
-    pointer-events: none;
-}
-
-@keyframes laserPulse {
-    0%, 100% { 
-        box-shadow: 
-            0 0 20px rgba(255, 0, 0, 0.8),
-            0 0 40px rgba(255, 0, 0, 0.4);
-    }
-    50% { 
-        box-shadow: 
-            0 0 30px rgba(255, 0, 0, 1),
-            0 0 60px rgba(255, 0, 0, 0.6);
-    }
-}
-
-.endpoint {
-    position: absolute;
-    bottom: 50px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    z-index: 4;
-    cursor: pointer;
-}
-
-.endpoint-glow {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(0, 255, 0, 0.3) 0%, transparent 70%);
-    animation: endpointPulse 2s ease-in-out infinite;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-.endpoint-glow.charging {
-    opacity: 1;
-    animation: endpointCharge 2s ease-in-out forwards;
-}
-
-@keyframes endpointPulse {
-    0%, 100% { 
-        transform: scale(1);
-        opacity: 0.3;
-    }
-    50% { 
-        transform: scale(1.2);
-        opacity: 0.6;
-    }
-}
-
-@keyframes endpointCharge {
-    0% { 
-        transform: scale(1);
-        opacity: 0.3;
-        background: radial-gradient(circle, rgba(0, 255, 0, 0.3) 0%, transparent 70%);
-    }
-    50% { 
-        transform: scale(1.5);
-        opacity: 0.7;
-        background: radial-gradient(circle, rgba(0, 255, 0, 0.6) 0%, transparent 70%);
-    }
-    100% { 
-        transform: scale(2);
-        opacity: 1;
-        background: radial-gradient(circle, rgba(0, 255, 0, 1) 0%, rgba(0, 255, 0, 0.5) 50%, transparent 100%);
-    }
-}
-
-.endpoint-core {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: #00ff00;
-    border: 3px solid #00cc00;
-    box-shadow: 
-        0 0 10px rgba(0, 255, 0, 0.5),
-        inset 0 0 10px rgba(255, 255, 255, 0.3);
-    transition: all 0.3s;
-}
-
-.endpoint-core.charged {
-    background: #00ff00;
-    border-color: #00ff00;
-    box-shadow: 
-        0 0 30px rgba(0, 255, 0, 1),
-        0 0 60px rgba(0, 255, 0, 0.8),
-        inset 0 0 20px rgba(255, 255, 255, 0.5);
-    animation: endpointFlash 0.5s ease-in-out infinite;
-}
-
-@keyframes endpointFlash {
-    0%, 100% { 
-        transform: translate(-50%, -50%) scale(1);
-    }
-    50% { 
-        transform: translate(-50%, -50%) scale(1.1);
-    }
+    display: block;
 }
 
 .controls {
     text-align: center;
-    padding: 20px;
+    padding: 15px;
 }
 
 .instruction {
-    font-size: 1.2em;
+    font-size: 1.1em;
     color: #ccc;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    margin-bottom: 8px;
+}
+
+.instruction-small {
+    font-size: 0.9em;
+    color: #aaa;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    margin-bottom: 15px;
+}
+
+.start-button {
+    background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    font-size: 1.2em;
+    border-radius: 25px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(255, 68, 68, 0.4);
+    transition: all 0.3s;
+    font-weight: bold;
+}
+
+.start-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 68, 68, 0.6);
+}
+
+.start-button:active {
+    transform: translateY(0);
+}
+
+.start-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* Modal Styles */
@@ -401,3 +274,18 @@ header {
     transform: translateY(0);
 }
 
+@media (max-width: 768px) {
+    .title {
+        font-size: 1.5em;
+    }
+    
+    .game-area {
+        height: 50vh;
+        min-height: 350px;
+    }
+    
+    .instruction {
+        font-size: 1em;
+        padding: 0 10px;
+    }
+}
