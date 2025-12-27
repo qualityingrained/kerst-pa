@@ -59,8 +59,16 @@ class ChristmasTreeGame {
             this.screenHeight = window.innerHeight;
             
             const rect = this.gameArea.getBoundingClientRect();
+            // Use display size for coordinate system (simpler for mobile)
             this.canvas.width = rect.width;
             this.canvas.height = rect.height;
+            
+            console.log('Canvas resized:', {
+                displayWidth: rect.width,
+                displayHeight: rect.height,
+                canvasWidth: this.canvas.width,
+                canvasHeight: this.canvas.height
+            });
             
             // Recreate trees if game hasn't started
             if (this.gameState === 'waiting' && this.canvas.width > 0 && this.canvas.height > 0) {
@@ -71,7 +79,7 @@ class ChristmasTreeGame {
         resize();
         window.addEventListener('resize', resize);
         window.addEventListener('orientationchange', () => {
-            setTimeout(resize, 100); // Delay to ensure correct dimensions after rotation
+            setTimeout(resize, 200); // Longer delay for mobile orientation change
         });
     }
     
@@ -88,7 +96,8 @@ class ChristmasTreeGame {
     
     // Calculate hitbox radius for a tree (same as in handleTreeTap)
     getHitboxRadius(tree) {
-        return Math.max(tree.width / 2, tree.height / 2) + 30;
+        // Reduced padding for mobile - trees are easier to tap on touch screens
+        return Math.max(tree.width / 2, tree.height / 2) + 20;
     }
     
     // Calculate overlap area of two circles
@@ -118,8 +127,14 @@ class ChristmasTreeGame {
     
     // Check if two trees' hitboxes overlap more than 10%
     checkOverlap(tree1, tree2) {
-        const dx = tree1.x - tree2.x;
-        const dy = tree1.y - tree2.y;
+        // Tree centers are at (x, y - height/2) since trees are drawn upward from base
+        const center1X = tree1.x;
+        const center1Y = tree1.y - tree1.height / 2;
+        const center2X = tree2.x;
+        const center2Y = tree2.y - tree2.height / 2;
+        
+        const dx = center1X - center2X;
+        const dy = center1Y - center2Y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
         const r1 = this.getHitboxRadius(tree1);
@@ -133,35 +148,54 @@ class ChristmasTreeGame {
         const smallerArea = Math.PI * smallerRadius * smallerRadius;
         
         // Check if overlap is more than 10% of smaller hitbox
+        // Use a small tolerance to account for floating point precision
         const overlapPercentage = (overlapArea / smallerArea) * 100;
         
-        return overlapPercentage > 10;
+        // Allow up to 10.5% to account for rounding and ensure trees can be placed
+        return overlapPercentage > 10.5;
     }
     
     createTrees() {
         this.trees = [];
         const treeCount = 10;
-        const maxAttempts = 1000; // Prevent infinite loops
+        const maxAttempts = 5000; // Increased attempts for better placement
         const treeWidth = 60;
         const treeHeight = 80;
         
-        // Padding from edges
-        const padding = 40;
+        // Reduced padding for mobile to maximize usable space
+        const padding = 30;
         const minX = padding;
         const maxX = this.canvas.width - padding;
-        const minY = padding + 100; // Leave space at top for UI
-        const maxY = this.canvas.height - padding - 50; // Leave space at bottom
+        const minY = padding + 80; // Reduced top space
+        const maxY = this.canvas.height - padding - 30; // Reduced bottom space
+        
+        console.log('Creating trees in area:', {
+            width: maxX - minX,
+            height: maxY - minY,
+            canvasWidth: this.canvas.width,
+            canvasHeight: this.canvas.height
+        });
         
         for (let i = 0; i < treeCount; i++) {
             let attempts = 0;
             let validPosition = false;
             let x, y;
             
-            while (!validPosition && attempts < maxAttempts) {
-                x = minX + Math.random() * (maxX - minX);
-                y = minY + Math.random() * (maxY - minY);
+            // Try grid-based placement first for better distribution
+            if (i < 6) {
+                // First 6 trees: try grid positions
+                const cols = 3;
+                const rows = 2;
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                const gridX = minX + (col + 0.5) * (maxX - minX) / cols;
+                const gridY = minY + (row + 0.5) * (maxY - minY) / rows;
                 
-                // Check overlap with existing trees
+                // Add some randomness to grid position
+                x = gridX + (Math.random() - 0.5) * ((maxX - minX) / cols * 0.6);
+                y = gridY + (Math.random() - 0.5) * ((maxY - minY) / rows * 0.6);
+                
+                // Check if this grid position is valid
                 validPosition = true;
                 for (const existingTree of this.trees) {
                     if (this.checkOverlap(
@@ -172,22 +206,115 @@ class ChristmasTreeGame {
                         break;
                     }
                 }
-                
-                attempts++;
             }
             
-            if (validPosition) {
-                this.trees.push({
-                    x: x,
-                    y: y,
-                    width: treeWidth,
-                    height: treeHeight,
-                    lightsOn: true,
-                    index: i
-                });
-            } else {
-                console.warn(`Could not place tree ${i + 1} without overlap`);
+            // If grid placement didn't work or we're past 6 trees, use random placement
+            if (!validPosition || i >= 6) {
+                // Try with strict overlap first
+                while (!validPosition && attempts < maxAttempts * 0.7) {
+                    x = minX + Math.random() * (maxX - minX);
+                    y = minY + Math.random() * (maxY - minY);
+                    
+                    // Check overlap with existing trees
+                    validPosition = true;
+                    for (const existingTree of this.trees) {
+                        if (this.checkOverlap(
+                            { x, y, width: treeWidth, height: treeHeight },
+                            existingTree
+                        )) {
+                            validPosition = false;
+                            break;
+                        }
+                    }
+                    
+                    attempts++;
+                }
+                
+                // If still no valid position, relax overlap requirement slightly
+                if (!validPosition) {
+                    console.log(`Relaxing overlap requirement for tree ${i + 1}`);
+                    while (!validPosition && attempts < maxAttempts) {
+                        x = minX + Math.random() * (maxX - minX);
+                        y = minY + Math.random() * (maxY - minY);
+                        
+                        // Check overlap with existing trees using relaxed check
+                        validPosition = true;
+                        for (const existingTree of this.trees) {
+                            // Use tree centers for distance calculation
+                            const center1X = x;
+                            const center1Y = y - treeHeight / 2;
+                            const center2X = existingTree.x;
+                            const center2Y = existingTree.y - existingTree.height / 2;
+                            const dx = center1X - center2X;
+                            const dy = center1Y - center2Y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            const r1 = this.getHitboxRadius({ x, y, width: treeWidth, height: treeHeight });
+                            const r2 = this.getHitboxRadius(existingTree);
+                            // Relaxed: allow up to 15% overlap if needed
+                            const minDistance = (r1 + r2) * 0.85;
+                            if (distance < minDistance) {
+                                validPosition = false;
+                                break;
+                            }
+                        }
+                        
+                        attempts++;
+                    }
+                }
             }
+            
+            // Always place the tree, even if overlap is slightly more than ideal
+            if (!validPosition) {
+                console.warn(`Could not place tree ${i + 1} optimally, placing anyway`);
+                // Find position with minimum overlap
+                let bestX = minX + Math.random() * (maxX - minX);
+                let bestY = minY + Math.random() * (maxY - minY);
+                let minOverlap = Infinity;
+                
+                for (let tryAttempt = 0; tryAttempt < 100; tryAttempt++) {
+                    const testX = minX + Math.random() * (maxX - minX);
+                    const testY = minY + Math.random() * (maxY - minY);
+                    let maxOverlap = 0;
+                    
+                    for (const existingTree of this.trees) {
+                        // Use tree centers for distance calculation
+                        const center1X = testX;
+                        const center1Y = testY - treeHeight / 2;
+                        const center2X = existingTree.x;
+                        const center2Y = existingTree.y - existingTree.height / 2;
+                        const dx = center1X - center2X;
+                        const dy = center1Y - center2Y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        const r1 = this.getHitboxRadius({ x: testX, y: testY, width: treeWidth, height: treeHeight });
+                        const r2 = this.getHitboxRadius(existingTree);
+                        const overlapArea = this.calculateCircleOverlap(r1, r2, distance);
+                        const smallerRadius = Math.min(r1, r2);
+                        const smallerArea = Math.PI * smallerRadius * smallerRadius;
+                        const overlapPct = (overlapArea / smallerArea) * 100;
+                        maxOverlap = Math.max(maxOverlap, overlapPct);
+                    }
+                    
+                    if (maxOverlap < minOverlap) {
+                        minOverlap = maxOverlap;
+                        bestX = testX;
+                        bestY = testY;
+                    }
+                }
+                
+                x = bestX;
+                y = bestY;
+                console.log(`Placed tree ${i + 1} at (${Math.round(x)}, ${Math.round(y)}) with ${Math.round(minOverlap)}% max overlap`);
+            }
+            
+            this.trees.push({
+                x: x,
+                y: y,
+                width: treeWidth,
+                height: treeHeight,
+                lightsOn: true,
+                index: i
+            });
+            console.log(`Placed tree ${i + 1} at (${Math.round(x)}, ${Math.round(y)})`);
         }
         
         console.log(`Created ${this.trees.length} trees`);
@@ -259,8 +386,12 @@ class ChristmasTreeGame {
         // Check if tap is on a tree
         let tapped = false;
         for (const tree of this.trees) {
-            const dx = x - tree.x;
-            const dy = y - tree.y;
+            // Tree center is at (x, y - height/2) since trees are drawn upward from base
+            const treeCenterX = tree.x;
+            const treeCenterY = tree.y - tree.height / 2;
+            
+            const dx = x - treeCenterX;
+            const dy = y - treeCenterY;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
             // Check if tap is within tree hitbox (same calculation as in checkOverlap)
@@ -268,7 +399,7 @@ class ChristmasTreeGame {
             if (distance < hitRadius) {
                 tree.lightsOn = true;
                 tapped = true;
-                console.log('Tree tapped!', tree.index, 'at', tree.x, tree.y, 'click at', x, y, 'distance', distance);
+                console.log('Tree tapped!', tree.index, 'center at', treeCenterX, treeCenterY, 'click at', x, y, 'distance', distance);
                 break;
             }
         }
