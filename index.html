@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pa's Christmas</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 class="title">🎄 Pa's Christmas 🎄</h1>
+        </header>
+        
+        <div class="game-area" id="gameArea">
+            <canvas id="laserCanvas" class="laser-canvas"></canvas>
+            <div class="laser-source" id="laserSource">
+                <div class="laser-source-core"></div>
+                <div class="laser-direction-indicator" id="laserIndicator"></div>
+            </div>
+            <div class="endpoint" id="endpoint">
+                <div class="endpoint-glow" id="endpointGlow"></div>
+                <div class="endpoint-core" id="endpointCore"></div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <p class="instruction">Rotate the laser source to aim. Drag mirrors to position them. Bounce the laser to the endpoint!</p>
+        </div>
+    </div>
+    
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🎮 VR Gaming Adventure! 🎮</h2>
+            </div>
+            <div class="modal-body">
+                <p>Congratulations! You've successfully charged the endpoint!</p>
+                <p>We're going VR gaming - we'll flesh out the details later.</p>
+                <p class="modal-subtitle">Get ready for an amazing experience! 🚀</p>
+            </div>
+            <button class="modal-close" id="modalClose">Close</button>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
+
